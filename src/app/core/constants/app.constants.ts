@@ -1,0 +1,24 @@
+
+const PAGINATION_CONSTANTS = {
+  DEFAULT_PAGE: 1,
+  DEFAULT_SIZE: 10,
+  ALLOWED_SIZES: [10, 25, 50, 100],
+} as const;
+
+const TIMINGS_CONSTANTS = {
+  DEBOUNCE_SEARCH_MS: 300,
+  CACHE_VALIDITY_MS: 5 * 60 * 1000, // 5 minutes
+} as const;
+
+const STORAGE_KEYS_CONSTANTS = {
+  DEBOUNCE_SEARCH_MS: 300,
+  CACHE_VALIDITY_MS: 5 * 60 * 1000, // 5 minutes
+} as const;
+
+export const APP_CONSTANTS = {
+  PAGINATION: PAGINATION_CONSTANTS,
+  TIMINGS: TIMINGS_CONSTANTS,
+  STORAGE_KEYS: STORAGE_KEYS_CONSTANTS,
+} as const;
+
+export type AppConstants = typeof APP_CONSTANTS;
