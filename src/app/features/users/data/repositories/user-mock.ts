@@ -1,4 +1,4 @@
-import { User } from '../domain/user.entity';
+import { User } from '../../domain/user.entity';
 
 export const MOCK_USERS: User[] = [
   {

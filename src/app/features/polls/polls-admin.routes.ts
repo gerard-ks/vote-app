@@ -1,11 +1,11 @@
 import { Routes } from '@angular/router';
 import { PollRepository } from '@features/polls/domain/poll.repository';
-import { PollMockService } from '@features/polls/data/poll.mock-service';
+import { PollRepositoryImpl } from '@features/polls/data/repositories/poll.repository.impl';
 
 export const POLLS_ADMIN_ROUTES: Routes = [
   {
     path: '', // On est déjà dans /admin/moderation
-    providers: [{ provide: PollRepository, useClass: PollMockService }],
+    providers: [{ provide: PollRepository, useClass: PollRepositoryImpl }],
     children: [
       {
         path: '',

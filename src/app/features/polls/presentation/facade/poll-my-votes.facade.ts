@@ -26,7 +26,7 @@ export class PollMyVotesFacade {
 
     this._loading.set(true);
 
-    // Le repository filtre les sondages où l'email est présent dans 'voters'
+    // Le repositories filtre les sondages où l'email est présent dans 'voters'
     this.repository.getVotedPolls(email).subscribe({
       next: (data) => {
         this._polls.set(data);
