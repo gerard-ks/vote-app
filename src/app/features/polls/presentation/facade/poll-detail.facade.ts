@@ -1,9 +1,8 @@
 import { inject, Injectable, signal, computed, DestroyRef } from '@angular/core';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
-import { ActivatedRoute, Router } from '@angular/router';
 import { catchError, tap } from 'rxjs/operators';
 import { EMPTY } from 'rxjs';
-import { MessageService, ConfirmationService } from 'primeng/api';
+import { MessageService } from 'primeng/api';
 import { AuthStore } from '@store/auth/auth.store';
 import { PollRepository } from '../../domain/poll.repository';
 import { Poll } from '../../domain/poll.entity';
@@ -17,11 +16,13 @@ export interface PollOptionView {
   isLeader: boolean;
 }
 
+export type ThemeColor = 'success' | 'danger' | 'warning' | 'neutral';
+
 export interface PollDetailView {
   title: string;
   status: 'active' | 'closed' | 'pending';
   statusBadgeText: string;
-  statusBadgeClass: string;
+  statusTheme: ThemeColor;
   createdAtText: string;
   createdByText: string;
   expiresAtText: string;
@@ -31,16 +32,12 @@ export interface PollDetailView {
 
 @Injectable()
 export class PollDetailFacade {
-
   private readonly repository = inject(PollRepository);
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
   private readonly authStore = inject(AuthStore);
   private readonly messageService = inject(MessageService);
-  private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
 
-  // ÉTAT LOCAL (STATE)
+  // --- ÉTAT LOCAL (STATE) ---
   private readonly _state = signal<ViewState<Poll>>({ type: 'IDLE' });
   public readonly state = this._state.asReadonly();
 
@@ -48,7 +45,7 @@ export class PollDetailFacade {
   public readonly hasVoted = signal<boolean>(false);
   private readonly _localStatus = signal<'active' | 'closed' | 'pending' | null>(null);
 
-  // ÉTATS DÉRIVÉS (COMPUTED)
+  // --- ÉTATS DÉRIVÉS (COMPUTED) ---
   public readonly currentPoll = computed(() => {
     const currentState = this.state();
     return currentState.type === 'SUCCESS' ? currentState.data : null;
@@ -94,28 +91,27 @@ export class PollDetailFacade {
     const poll = this.currentPoll();
     if (!poll) return null;
 
-    const isClosed = poll.status === 'closed';
-    const isActive = poll.status === 'active';
+    const currentStatus = this.effectiveStatus();
+    const isClosed = currentStatus === 'closed';
+    const isActive = currentStatus === 'active';
 
     const createdAtDate = new Date(poll.createdAt).toLocaleDateString('fr-FR');
     const expiresAtDate = new Date(poll.expiresAt).toLocaleDateString('fr-FR');
 
     let expiresAtText = `Expire le ${expiresAtDate}`;
     if (isClosed) expiresAtText = `Clos le ${expiresAtDate}`;
-    if (poll.status === 'pending') expiresAtText = `Démarre le ${createdAtDate}`;
+    if (currentStatus === 'pending') expiresAtText = `Démarre le ${createdAtDate}`;
 
     const maxV = this.maxVotes();
     const total = poll.totalVotes;
 
     return {
       title: poll.title,
-      status: poll.status,
+      status: currentStatus ?? 'pending',
       statusBadgeText: isClosed ? 'Clos' : isActive ? 'Actif' : 'En attente',
-      statusBadgeClass: isActive
-        ? 'bg-emerald-50 text-emerald-600'
-        : isClosed
-          ? 'bg-red-50 text-red-600'
-          : 'bg-orange-50 text-orange-600',
+
+      statusTheme: isActive ? 'success' : isClosed ? 'danger' : 'warning',
+
       createdAtText: createdAtDate,
       createdByText: `par @${poll.createdBy}`,
       expiresAtText,
@@ -131,14 +127,8 @@ export class PollDetailFacade {
   });
 
   // CYCLE DE VIE & ACCÈS DONNÉES
-  public initPage(): void {
+  public loadPoll(pollId: string): void {
     this._state.set({ type: 'LOADING' });
-    const pollId = this.route.snapshot.paramMap.get('id');
-
-    if (!pollId) {
-      this._state.set({ type: 'ERROR', message: 'Identifiant manquant.' });
-      return;
-    }
 
     this.repository
       .getById(pollId)
@@ -192,23 +182,7 @@ export class PollDetailFacade {
       });
   }
 
-  public confirmClosePoll(event: Event): void {
-    this.confirmationService.confirm({
-      target: event.target as EventTarget,
-      message: 'Cette action est irréversible. Les participants seront notifiés.',
-      header: 'Clôturer ce sondage ?',
-      icon: 'pi pi-exclamation-triangle text-red-500',
-      acceptLabel: 'Clôturer',
-      rejectLabel: 'Annuler',
-      acceptButtonStyleClass: 'p-button-danger',
-      rejectButtonStyleClass: 'p-button-text p-button-secondary',
-      accept: () => {
-        this.closePoll();
-      },
-    });
-  }
-
-  private closePoll(): void {
+  public closePoll(): void {
     const pollId = this.currentPoll()?.id;
     if (!pollId) return;
 
@@ -233,9 +207,9 @@ export class PollDetailFacade {
       });
   }
 
-  public exportToCsv(): void {
+  public generateCsvData(): string | null {
     const poll = this.currentPoll();
-    if (!poll) return;
+    if (!poll) return null;
 
     const header = 'Option,Votes,Pourcentage\n';
     const rows = poll.options
@@ -245,50 +219,7 @@ export class PollDetailFacade {
       })
       .join('\n');
 
-    const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `sondage-${poll.id}-resultats.csv`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-
-    this.showToast('success', 'Export réussi', 'Le fichier CSV a été téléchargé.');
-  }
-
-  public async shareLink(): Promise<void> {
-    try {
-      await navigator.clipboard.writeText(window.location.href);
-      this.showToast('success', 'Lien copié', 'Le lien a été copié dans le presse-papier !');
-    } catch {
-      this.showToast('error', 'Erreur', 'Impossible de copier le lien.');
-    }
-  }
-
-  public goBack(): void {
-    if (!this.authStore.isAuthenticated()) {
-      void this.router.navigate(['/']);
-      return;
-    }
-
-    const navigationId = window.history.state?.navigationId;
-    if (navigationId && navigationId > 1) {
-      window.history.back();
-    } else {
-      void this.router.navigate(['/member']);
-    }
-  }
-
-  // Routage pour la modale d'authentification
-  public goToLogin(): void {
-    void this.router.navigate(['/auth/login']);
-  }
-
-  public goToRegister(): void {
-    void this.router.navigate(['/auth/register', { mode: 'register' }]);
+    return header + rows;
   }
 
   //  UTILITAIRES

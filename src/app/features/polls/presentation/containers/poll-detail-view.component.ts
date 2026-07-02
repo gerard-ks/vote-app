@@ -2,9 +2,11 @@
   import { CommonModule } from '@angular/common';
   import { ButtonModule } from 'primeng/button';
   import { ConfirmPopupModule } from 'primeng/confirmpopup';
-  import { PollDetailFacade } from '../facade/poll-detail.facade';
+  import { PollDetailFacade, ThemeColor } from '../facade/poll-detail.facade';
   import { VoteProgressBarComponent } from '@features/polls/presentation/components/vote-progress-bar.component';
   import { AuthModalComponent } from '@features/polls/presentation/components/auth-modal.component';
+  import { ConfirmationService, MessageService } from 'primeng/api';
+  import { Router } from '@angular/router';
 
   @Component({
     selector: 'app-poll-detail-view',
@@ -15,9 +17,10 @@
       VoteProgressBarComponent,
       AuthModalComponent,
     ],
+    providers: [ConfirmationService],
     template: `
       <div class="max-w-2xl mx-auto py-8 md:py-12 font-sans box-border relative">
-        <p-confirmpopup />
+        <p-confirmpopup></p-confirmpopup>
 
         <p-button
           label="Retour"
@@ -26,7 +29,7 @@
           severity="secondary"
           size="small"
           styleClass="mb-6 p-0 text-sm font-semibold"
-          (click)="facade.goBack()"
+          (click)="goBack()"
         />
 
         @let currentState = facade.state();
@@ -61,7 +64,7 @@
                 size="small"
                 variant="text"
                 class="mt-4 inline-block"
-                (click)="facade.goBack()"
+                (click)="goBack()"
               />
             </div>
           }
@@ -82,12 +85,12 @@
                     severity="secondary"
                     size="small"
                     styleClass="w-9 h-9 p-0 justify-center"
-                    (click)="facade.shareLink()"
+                    (click)="shareLink()"
                   />
 
                   <span
                     class="text-[10px] font-extrabold px-2 py-0.5 rounded-full uppercase tracking-wider"
-                    [ngClass]="pollView.statusBadgeClass"
+                    [ngClass]="getBadgeClass(pollView.statusTheme)"
                   >
                     {{ pollView.statusBadgeText }}
                   </span>
@@ -135,7 +138,7 @@
                         icon="pi pi-download"
                         variant="outlined"
                         size="small"
-                        (click)="facade.exportToCsv()"
+                        (click)="exportToCsv()"
                       />
 
                       @if (pollView.status === 'active') {
@@ -144,7 +147,7 @@
                           icon="pi pi-lock"
                           severity="danger"
                           size="small"
-                          (click)="facade.confirmClosePoll($event)"
+                          (click)="confirmClosePoll($event)"
                         />
                       }
                     </div>
@@ -222,7 +225,7 @@
                       severity="secondary"
                       size="small"
                       styleClass="font-bold"
-                      (click)="facade.goBack()"
+                      (click)="goBack()"
                     />
 
                     @if (facade.isAuthenticated()) {
@@ -255,7 +258,7 @@
                         icon="pi pi-download"
                         variant="outlined"
                         size="small"
-                        (click)="facade.exportToCsv()"
+                        (click)="exportToCsv()"
                       />
 
                       <p-button
@@ -263,7 +266,7 @@
                         icon="pi pi-lock"
                         severity="danger"
                         size="small"
-                        (click)="facade.confirmClosePoll($event)"
+                        (click)="confirmClosePoll($event)"
                       />
                     </div>
                   }
@@ -289,19 +292,115 @@
 
         <app-auth-modal
           [(visible)]="showAuthModal"
-          (loginRequested)="facade.goToLogin()"
-          (registerRequested)="facade.goToRegister()"
+          (loginRequested)="goToLogin()"
+          (registerRequested)="goToRegister()"
         ></app-auth-modal>
       </div>
     `,
   })
   export class PollDetailViewComponent {
     protected readonly facade = inject(PollDetailFacade);
+    private readonly router = inject(Router);
+    private readonly confirmationService = inject(ConfirmationService);
+    private readonly messageService = inject(MessageService);
 
     protected readonly showAuthModal = signal(false);
+
+    protected getBadgeClass(theme: ThemeColor): string {
+      switch (theme) {
+        case 'success':
+          return 'bg-emerald-50 text-emerald-600';
+        case 'danger':
+          return 'bg-red-50 text-red-600';
+        case 'warning':
+          return 'bg-orange-50 text-orange-600';
+        default:
+          return 'bg-gray-100 text-gray-600';
+      }
+    }
 
     protected submitVote(): void {
       if (!this.facade.selectedOption()) return;
       this.facade.submitVote();
+    }
+
+    public confirmClosePoll(event: Event): void {
+      this.confirmationService.confirm({
+        target: event.target as EventTarget,
+        message: 'Cette action est irréversible. Les participants seront notifiés.',
+        header: 'Clôturer ce sondage ?',
+        icon: 'pi pi-exclamation-triangle text-red-500',
+        acceptLabel: 'Clôturer',
+        rejectLabel: 'Annuler',
+        acceptButtonStyleClass: 'p-button-danger',
+        rejectButtonStyleClass: 'p-button-text p-button-secondary',
+        accept: () => {
+          this.facade.closePoll();
+        },
+      });
+    }
+
+    public exportToCsv(): void {
+      const csvData = this.facade.generateCsvData();
+      if (!csvData) return;
+
+      const blob = new Blob([csvData], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `sondage-resultats.csv`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      this.messageService.add({
+        severity: 'success',
+        summary: 'Export réussi',
+        detail: 'Le fichier CSV a été téléchargé.',
+        life: 3000,
+      });
+    }
+
+    public async shareLink(): Promise<void> {
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        this.messageService.add({
+          severity: 'success',
+          summary: 'Lien copié',
+          detail: 'Le lien a été copié dans le presse-papier !',
+          life: 3000,
+        });
+      } catch {
+        this.messageService.add({
+          severity: 'error',
+          summary: 'Erreur',
+          detail: 'Impossible de copier le lien.',
+          life: 3000,
+        });
+      }
+    }
+
+    public goBack(): void {
+      if (!this.facade.isAuthenticated()) {
+        void this.router.navigate(['/']);
+        return;
+      }
+
+      const navigationId = window.history.state?.navigationId;
+      if (navigationId && navigationId > 1) {
+        window.history.back();
+      } else {
+        void this.router.navigate(['/member']);
+      }
+    }
+
+    public goToLogin(): void {
+      void this.router.navigate(['/auth/login']);
+    }
+
+    public goToRegister(): void {
+      void this.router.navigate(['/auth/register', { mode: 'register' }]);
     }
   }
