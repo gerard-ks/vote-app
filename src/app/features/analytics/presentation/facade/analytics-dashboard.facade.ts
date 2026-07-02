@@ -1,12 +1,14 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject, DestroyRef } from '@angular/core';
 import { AnalyticsRepository } from '../../domain/analytics.repository';
 import { DashboardSummary } from '../../domain/analytics.entity';
 import { ViewState } from '@core/models/view-state.model';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Injectable()
 export class AnalyticsDashboardFacade {
   // Injection propre du contrat de son propre domaine
   private readonly repository = inject(AnalyticsRepository);
+  private readonly destroyRef = inject(DestroyRef);
 
   // 1. L'état global unifié
   private readonly _state = signal<ViewState<DashboardSummary>>({ type: 'IDLE' });
@@ -40,26 +42,29 @@ export class AnalyticsDashboardFacade {
     // On notifie la vue que le chargement commence
     this._state.set({ type: 'LOADING' });
 
-    this.repository.getDashboardSummary().subscribe({
-      next: (data) => {
-        // Validation des données : a-t-on vraiment quelque chose à afficher ?
-        const hasData = data && data.metrics && data.metrics.length > 0;
+    this.repository
+      .getDashboardSummary()
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: (data) => {
+          // Validation des données : a-t-on vraiment quelque chose à afficher ?
+          const hasData = data && data.metrics && data.metrics.length > 0;
 
-        if (!hasData) {
-          // La donnée est valide (200 OK) mais la plateforme est vierge
-          this._state.set({ type: 'EMPTY' });
-        } else {
-          // Tout est parfait
-          this._state.set({ type: 'SUCCESS', data });
-        }
-      },
-      error: () => {
-        // En cas d'échec HTTP ou d'erreur serveur
-        this._state.set({
-          type: 'ERROR',
-          message: 'Impossible de récupérer les indicateurs de la plateforme pour le moment.',
-        });
-      },
-    });
+          if (!hasData) {
+            // La donnée est valide (200 OK) mais la plateforme est vierge
+            this._state.set({ type: 'EMPTY' });
+          } else {
+            // Tout est parfait
+            this._state.set({ type: 'SUCCESS', data });
+          }
+        },
+        error: () => {
+          // En cas d'échec HTTP ou d'erreur serveur
+          this._state.set({
+            type: 'ERROR',
+            message: 'Impossible de récupérer les indicateurs de la plateforme pour le moment.',
+          });
+        },
+      });
   }
 }

@@ -1,8 +1,10 @@
-import { Injectable, signal, computed, inject } from '@angular/core';
+import { Injectable, signal, computed, inject, DestroyRef } from '@angular/core';
 import { Router } from '@angular/router';
 import { Location } from '@angular/common';
 import { MessageService } from 'primeng/api';
-import { AuthStore } from '../../../../store/auth/auth.store';
+import { AuthStore } from '@store/auth/auth.store';
+import { PollRepository } from '@features/polls/domain/poll.repository';
+import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Injectable()
 export class PollCreateFacade {
@@ -10,6 +12,8 @@ export class PollCreateFacade {
   private readonly location = inject(Location);
   private readonly authStore = inject(AuthStore);
   private readonly messageService = inject(MessageService);
+  private readonly repository = inject(PollRepository);
+  private readonly destroyRef = inject(DestroyRef);
 
   // ─── ÉTAT LOCAL (Équivalent des useState) ───
   public readonly title = signal<string>('');
@@ -22,8 +26,6 @@ export class PollCreateFacade {
 
   // ─── CYCLE DE VIE (Équivalent du useEffect) ───
   public init(): void {
-    const session = this.authStore.session();
-
     if (!this.authStore.isAuthenticated()) {
       void this.router.navigate(['/auth/login']);
       return;
@@ -91,13 +93,13 @@ export class PollCreateFacade {
     const currentErrors = this.errors();
     const isTitleEmpty = this.title().trim().length === 0;
     const isDateEmpty = this.expiresAt().length === 0;
-    const validOptionsCount = this.options().filter((o) => o.trim().length > 0).length;
+    const validOptions = this.options().filter((o) => o.trim().length > 0);
 
     if (
       Object.keys(currentErrors).length > 0 ||
       isTitleEmpty ||
       isDateEmpty ||
-      validOptionsCount < 2
+      validOptions.length < 2
     ) {
       this.messageService.add({
         severity: 'warn',
@@ -107,7 +109,8 @@ export class PollCreateFacade {
       return;
     }
 
-    if (!this.authStore.session()?.emailVerified) {
+    const session = this.authStore.session();
+    if (!session?.emailVerified) {
       this.messageService.add({
         severity: 'error',
         summary: 'Action requise',
@@ -119,14 +122,36 @@ export class PollCreateFacade {
     this.isSubmitting.set(true);
 
     // Simulation d'appel API
-    setTimeout(() => {
-      this.messageService.add({
-        severity: 'success',
-        summary: 'Sondage créé',
-        detail: 'Votre sondage est maintenant en ligne !',
+    const payload = {
+      title: this.title().trim(),
+      options: validOptions.map((text) => ({ text, votes: 0, id: crypto.randomUUID() })),
+      expiresAt: this.expiresAt(),
+      showResultsBeforeClose: this.showResults(),
+      createdBy: session.name, // On lie le sondage au créateur
+    };
+
+    this.repository
+      .createPoll(payload)
+      .pipe(takeUntilDestroyed(this.destroyRef))
+      .subscribe({
+        next: () => {
+          this.isSubmitting.set(false);
+          this.messageService.add({
+            severity: 'success',
+            summary: 'Sondage créé',
+            detail: 'Votre sondage est maintenant en ligne !',
+          });
+          void this.router.navigate(['/member']);
+        },
+        error: () => {
+          this.isSubmitting.set(false);
+          this.messageService.add({
+            severity: 'error',
+            summary: 'Erreur',
+            detail: 'Impossible de créer le sondage.',
+          });
+        },
       });
-      void this.router.navigate(['/member']);
-    }, 800);
   }
 
   public goBack(): void {

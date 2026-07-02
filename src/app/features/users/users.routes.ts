@@ -9,7 +9,7 @@ export const usersRoutes: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('@pages/dashboard/admin-users-page.component').then(
+          import('@features/users/presentation/pages/admin-users-page.component').then(
             (m) => m.AdminUsersPageComponent,
           ),
       }

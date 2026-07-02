@@ -9,14 +9,14 @@ export const ANALYTICS_ROUTES: Routes = [
       {
         path: 'dashboard',
         loadComponent: () =>
-          import('@pages/dashboard/admin-dashboard-page.component').then(
+          import('@features/analytics/presentation/pages/admin-dashboard-page.component').then(
             (m) => m.AdminDashboardPageComponent,
           ),
       },
       {
         path: 'analytics',
         loadComponent: () =>
-          import('@pages/dashboard/admin-analytics-page.component').then(
+          import('@features/analytics/presentation/pages/admin-analytics-page.component').then(
             (m) => m.AdminAnalyticsPageComponent,
           ),
       },

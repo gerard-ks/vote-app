@@ -1,7 +1,8 @@
-import { Injectable, signal, inject } from '@angular/core';
+import { Injectable, signal, inject, computed } from '@angular/core';
 import { Poll } from '@features/polls/domain/poll.entity';
 import { AuthStore } from '@store/auth/auth.store';
 import { PollRepository } from '@features/polls/domain/poll.repository';
+import { mapPollToCardView } from '@features/polls/presentation/components/poll-card.ui-model';
 
 @Injectable()
 export class PollMyVotesFacade {
@@ -13,6 +14,11 @@ export class PollMyVotesFacade {
 
   public readonly polls = this._polls.asReadonly();
   public readonly loading = this._loading.asReadonly();
+
+  public readonly pollViews = computed(() => {
+    const isAuth = this.authStore.isAuthenticated();
+    return this._polls().map((poll) => mapPollToCardView(poll, isAuth));
+  });
 
   public loadMyVotes(): void {
     const email = this.authStore.session()?.email;

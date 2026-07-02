@@ -1,13 +1,12 @@
 import { Component, OnInit, inject } from '@angular/core';
 import { ProgressSpinnerModule } from 'primeng/progressspinner';
-import { PollCardComponent } from '@features/polls/presentation/dumb/poll-card.component';
+import { PollCardComponent } from '@features/polls/presentation/components/poll-card.component';
 import { PollMyVotesFacade } from '@features/polls/presentation/facade/poll-my-votes.facade';
 import { RouterLink } from '@angular/router';
 
 @Component({
   selector: 'app-poll-my-votes-view',
   imports: [ProgressSpinnerModule, PollCardComponent, RouterLink],
-  providers: [PollMyVotesFacade],
   template: `
     <div class="mb-8">
       <h1 class="text-2xl md:text-3xl font-bold text-foreground">Mes Votes</h1>
@@ -20,8 +19,8 @@ import { RouterLink } from '@angular/router';
       </div>
     } @else {
       <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-        @for (poll of facade.polls(); track poll.id) {
-          <app-poll-card [poll]="poll" />
+        @for (pollView of facade.pollViews(); track pollView.id) {
+          <app-poll-card [poll]="pollView" />
         } @empty {
           <div class="col-span-full flex flex-col items-center justify-center py-20 text-center">
             <p class="text-lg font-medium text-muted-foreground">Vous n'avez pas encore voté</p>
@@ -40,10 +39,6 @@ import { RouterLink } from '@angular/router';
     }
   `,
 })
-export class PollMyVotesViewComponent implements OnInit {
+export class PollMyVotesViewComponent {
   protected readonly facade = inject(PollMyVotesFacade);
-
-  ngOnInit(): void {
-    this.facade.loadMyVotes();
-  }
 }

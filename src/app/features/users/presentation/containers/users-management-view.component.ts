@@ -1,13 +1,12 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { ConfirmationService } from 'primeng/api';
 import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
-import { InputTextModule } from 'primeng/inputtext'; // ✅ Import rajouté
-import { UsersManagementFacade } from '../facade/users-management.facade';
-import { User, UserRole } from '../../domain/user.entity';
+import { InputTextModule } from 'primeng/inputtext';
+import { UsersManagementFacade, UserView } from '../facade/users-management.facade';
 
 @Component({
   selector: 'app-users-management-view',
@@ -17,9 +16,9 @@ import { User, UserRole } from '../../domain/user.entity';
     RouterModule,
     ConfirmDialogModule,
     ToastModule,
-    InputTextModule
+    InputTextModule,
   ],
-  providers: [UsersManagementFacade, ConfirmationService, MessageService],
+  providers: [ConfirmationService],
   template: `
     <div class="container py-8 mx-auto max-w-300">
       <p-toast></p-toast>
@@ -53,22 +52,24 @@ import { User, UserRole } from '../../domain/user.entity';
         />
       </div>
 
-      @if (facade.state().type === 'ERROR') {
+      @let currentState = facade.state();
+
+      @if (currentState.type === 'ERROR') {
         <div class="p-4 rounded-md bg-red-50 text-red-600 border border-red-100 text-sm">
-          {{ facade.errorMessage() }}
+          {{ currentState.message }}
         </div>
-      } @else if (facade.state().type === 'EMPTY') {
+      } @else if (currentState.type === 'EMPTY') {
         <div class="py-12 text-center border border-dashed border-gray-200 rounded-lg bg-gray-50">
           <p class="text-gray-500 m-0">Aucun utilisateur trouvé.</p>
         </div>
       } @else {
-        @if (facade.state().type === 'LOADING' || facade.state().type === 'IDLE') {
+        @if (currentState.type === 'LOADING' || currentState.type === 'IDLE') {
           <div class="flex justify-center py-10">
             <i class="pi pi-spinner pi-spin text-2xl text-primary"></i>
           </div>
         }
 
-        <div [class.hidden]="facade.state().type !== 'SUCCESS'">
+        <div [class.hidden]="currentState.type !== 'SUCCESS'">
           <div
             class="hidden md:block rounded-lg border border-gray-200 overflow-hidden bg-white shadow-sm"
           >
@@ -108,7 +109,7 @@ import { User, UserRole } from '../../domain/user.entity';
                 </tr>
               </thead>
               <tbody class="divide-y divide-gray-100">
-                @for (user of facade.users(); track user.id) {
+                @for (user of facade.usersView(); track user.id) {
                   <tr
                     [class.opacity-50]="!user.isActive"
                     class="transition-opacity hover:bg-gray-50/50"
@@ -122,9 +123,9 @@ import { User, UserRole } from '../../domain/user.entity';
                     <td class="px-6 py-4">
                       <span
                         class="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-medium uppercase tracking-wide"
-                        [ngClass]="getRoleBadgeClasses(user.role)"
+                        [ngClass]="user.roleBadgeClass"
                       >
-                        {{ user.role === 'creator' ? 'Créateur' : user.role }}
+                        {{ user.roleLabel }}
                       </span>
                     </td>
                     <td class="px-6 py-4">
@@ -155,7 +156,7 @@ import { User, UserRole } from '../../domain/user.entity';
                       {{ user.createdAt | date: 'dd/MM/yyyy' }}
                     </td>
                     <td class="px-6 py-4 text-right">
-                      @if (user.role !== 'admin') {
+                      @if (user.roleLabel !== 'admin') {
                         <button
                           (click)="confirmToggleStatus(user)"
                           class="text-[13px] font-medium bg-transparent border-none p-0 cursor-pointer transition-colors"
@@ -176,7 +177,7 @@ import { User, UserRole } from '../../domain/user.entity';
           </div>
 
           <div class="md:hidden space-y-3">
-            @for (user of facade.users(); track user.id) {
+            @for (user of facade.usersView(); track user.id) {
               <div
                 class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm"
                 [class.opacity-50]="!user.isActive"
@@ -188,9 +189,9 @@ import { User, UserRole } from '../../domain/user.entity';
                   </div>
                   <span
                     class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium uppercase tracking-wide"
-                    [ngClass]="getRoleBadgeClasses(user.role)"
+                    [ngClass]="user.roleBadgeClass"
                   >
-                    {{ user.role === 'creator' ? 'Créateur' : user.role }}
+                    {{ user.roleLabel }}
                   </span>
                 </div>
                 <div
@@ -209,14 +210,11 @@ import { User, UserRole } from '../../domain/user.entity';
                     }
                   </span>
                   <span class="flex items-center gap-1">
-                    <span
-                      class="w-2 h-2 rounded-full"
-                      [ngClass]="user.isActive ? 'bg-green-500' : 'bg-gray-400'"
-                    ></span>
-                    {{ user.isActive ? 'Actif' : 'Inactif' }}
+                    <span class="w-2 h-2 rounded-full" [ngClass]="user.statusClass"></span>
+                    {{ user.statusLabel }}
                   </span>
                 </div>
-                @if (user.role !== 'admin') {
+                @if (user.roleLabel !== 'admin') {
                   <div class="mt-4 flex justify-end">
                     <button
                       (click)="confirmToggleStatus(user)"
@@ -233,20 +231,20 @@ import { User, UserRole } from '../../domain/user.entity';
 
           <div class="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
             <p class="text-[13px] text-gray-500 m-0">
-              Page <span class="font-medium text-gray-900">{{ currentPage }}</span> sur
-              <span class="font-medium text-gray-900">{{ totalPages }}</span>
+              Page <span class="font-medium text-gray-900">{{ facade.currentPage() }}</span> sur
+              <span class="font-medium text-gray-900">{{ facade.totalPages() }}</span>
             </p>
             <div class="flex gap-2">
               <button
-                [disabled]="!hasPreviousPage"
-                (click)="previousPage()"
+                [disabled]="!facade.hasPreviousPage()"
+                (click)="facade.changePage(facade.currentPage() - 1)"
                 class="px-3 py-1.5 text-[13px] font-medium rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 Précédent
               </button>
               <button
-                [disabled]="!hasNextPage"
-                (click)="nextPage()"
+                [disabled]="!facade.hasNextPage()"
+                (click)="facade.changePage(facade.currentPage() + 1)"
                 class="px-3 py-1.5 text-[13px] font-medium rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
               >
                 Suivant
@@ -258,20 +256,16 @@ import { User, UserRole } from '../../domain/user.entity';
     </div>
   `,
 })
-export class UsersManagementViewComponent implements OnInit {
+export class UsersManagementViewComponent {
   protected readonly facade = inject(UsersManagementFacade);
   private readonly confirmationService = inject(ConfirmationService);
-
-  ngOnInit(): void {
-    this.facade.loadUsers();
-  }
 
   onSearch(event: Event): void {
     const element = event.target as HTMLInputElement;
     this.facade.updateSearch(element.value);
   }
 
-  confirmToggleStatus(user: User): void {
+  confirmToggleStatus(user: UserView): void {
     if (!user.isActive) {
       this.facade.toggleStatus(user.id, user.isActive);
       return;
@@ -287,49 +281,5 @@ export class UsersManagementViewComponent implements OnInit {
         this.facade.toggleStatus(user.id, user.isActive);
       },
     });
-  }
-
-  protected getRoleBadgeClasses(role: UserRole): string {
-    switch (role) {
-      case 'admin':
-        return 'bg-red-100 text-red-500';
-      case 'creator':
-        return 'bg-indigo-100/70 text-indigo-500';
-      case 'participant':
-        return 'bg-gray-100 text-gray-500';
-      default:
-        return 'bg-gray-100 text-gray-500';
-    }
-  }
-
-  get currentPage(): number {
-    const state = this.facade.state();
-    return state.type === 'SUCCESS' ? state.data.currentPage : 1;
-  }
-
-  get totalPages(): number {
-    const state = this.facade.state();
-    if (state.type !== 'SUCCESS') return 1;
-    return Math.max(1, Math.ceil(state.data.totalRecords / state.data.pageSize));
-  }
-
-  get hasNextPage(): boolean {
-    return this.currentPage < this.totalPages;
-  }
-
-  get hasPreviousPage(): boolean {
-    return this.currentPage > 1;
-  }
-
-  nextPage(): void {
-    if (this.hasNextPage) {
-      this.facade.changePage(this.currentPage + 1);
-    }
-  }
-
-  previousPage(): void {
-    if (this.hasPreviousPage) {
-      this.facade.changePage(this.currentPage - 1);
-    }
   }
 }

@@ -1,4 +1,4 @@
-import { Component, OnInit, inject } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { RouterModule } from '@angular/router';
@@ -7,7 +7,6 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { InputTextModule } from 'primeng/inputtext';
 import { PollsModerationFacade } from '../facade/polls-moderation.facade';
-import { PollStatus } from '../../domain/poll.entity';
 
 @Component({
   selector: 'app-polls-moderation-view',
@@ -19,7 +18,7 @@ import { PollStatus } from '../../domain/poll.entity';
     ToastModule,
     InputTextModule,
   ],
-  providers: [PollsModerationFacade, ConfirmationService, MessageService],
+  providers: [ConfirmationService, MessageService],
   template: `
     <div class="container py-8 mx-auto max-w-300">
       <p-toast></p-toast>
@@ -81,7 +80,7 @@ import { PollStatus } from '../../domain/poll.entity';
         }
 
         <div [class.hidden]="facade.state().type !== 'SUCCESS'">
-          @if (facade.paginatedPolls().length === 0) {
+          @if (facade.paginatedPollsView().length === 0) {
             <div
               class="rounded-lg border border-dashed border-gray-200 bg-gray-50/50 py-12 text-center"
             >
@@ -91,41 +90,41 @@ import { PollStatus } from '../../domain/poll.entity';
             </div>
           } @else {
             <div class="space-y-3">
-              @for (poll of facade.paginatedPolls(); track poll.id) {
+              @for (pollView of facade.paginatedPollsView(); track pollView.id) {
                 <div
                   class="rounded-lg border border-gray-200 bg-white p-4 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 shadow-sm"
                 >
                   <div class="flex-1 min-w-0">
                     <div class="flex items-center gap-2 mb-1">
                       <h3 class="text-sm font-semibold text-gray-900 truncate m-0">
-                        {{ poll.title }}
+                        {{ pollView.title }}
                       </h3>
                       <span
                         class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide shrink-0"
-                        [ngClass]="getStatusBadgeClasses(poll.status)"
+                        [ngClass]="pollView.statusBadgeClass"
                       >
-                        {{ getStatusLabel(poll.status) }}
+                        {{ pollView.statusLabel }}
                       </span>
                     </div>
                     <p class="text-xs text-gray-500 m-0 mt-1">
-                      par <span class="font-medium">&#64;{{ poll.createdBy }}</span> &middot;
-                      {{ poll.totalVotes }} votes &middot; Créé le
-                      {{ poll.createdAt | date: 'dd/MM/yyyy' }}
+                      par <span class="font-medium">&#64;{{ pollView.createdBy }}</span> &middot;
+                      {{ pollView.totalVotes }} votes &middot; Créé le
+                      {{ pollView.createdAtText }}
                     </p>
                   </div>
 
                   <div class="flex items-center gap-2 shrink-0">
                     <a
-                      [routerLink]="['/admin/polls/sondage', poll.id]"
+                      [routerLink]="['/admin/polls/sondage', pollView.id]"
                       class="rounded-md p-2 text-gray-400 hover:text-gray-900 hover:bg-gray-100 transition-colors no-underline cursor-pointer"
                       title="Voir"
                     >
                       <i class="pi pi-eye"></i>
                     </a>
 
-                    @if (poll.status === 'active') {
+                    @if (pollView.status === 'active') {
                       <button
-                        (click)="confirmClose(poll.id)"
+                        (click)="facade.confirmClose(pollView.id)"
                         class="rounded-md p-2 text-yellow-500 hover:bg-yellow-50 border-none bg-transparent cursor-pointer transition-colors"
                         title="Clôturer"
                       >
@@ -134,7 +133,7 @@ import { PollStatus } from '../../domain/poll.entity';
                     }
 
                     <button
-                      (click)="confirmDelete(poll.id)"
+                      (click)="facade.confirmDelete(pollView.id)"
                       class="rounded-md p-2 text-red-500 hover:bg-red-50 border-none bg-transparent cursor-pointer transition-colors"
                       title="Supprimer"
                     >
@@ -147,20 +146,20 @@ import { PollStatus } from '../../domain/poll.entity';
 
             <div class="mt-6 flex items-center justify-between border-t border-gray-100 pt-4">
               <p class="text-[13px] text-gray-500 m-0">
-                Page <span class="font-medium text-gray-900">{{ currentPage }}</span> sur
-                <span class="font-medium text-gray-900">{{ totalPages }}</span>
+                Page <span class="font-medium text-gray-900">{{ facade.currentPage() }}</span> sur
+                <span class="font-medium text-gray-900">{{ facade.totalPages() }}</span>
               </p>
               <div class="flex gap-2">
                 <button
-                  [disabled]="!hasPreviousPage"
-                  (click)="previousPage()"
+                  [disabled]="!facade.hasPreviousPage()"
+                  (click)="facade.changePage(facade.currentPage() - 1)"
                   class="px-3 py-1.5 text-[13px] font-medium rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   Précédent
                 </button>
                 <button
-                  [disabled]="!hasNextPage"
-                  (click)="nextPage()"
+                  [disabled]="!facade.hasNextPage()"
+                  (click)="facade.changePage(facade.currentPage() + 1)"
                   class="px-3 py-1.5 text-[13px] font-medium rounded border border-gray-200 bg-white text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors cursor-pointer"
                 >
                   Suivant
@@ -173,9 +172,8 @@ import { PollStatus } from '../../domain/poll.entity';
     </div>
   `,
 })
-export class PollsModerationViewComponent implements OnInit {
+export class PollsModerationViewComponent {
   protected readonly facade = inject(PollsModerationFacade);
-  private readonly confirmationService = inject(ConfirmationService);
 
   public readonly statuses = [
     { label: 'Tous', value: 'all' },
@@ -184,91 +182,8 @@ export class PollsModerationViewComponent implements OnInit {
     { label: 'En attente', value: 'pending' },
   ];
 
-  ngOnInit(): void {
-    this.facade.loadPolls();
-  }
-
   onSearch(event: Event): void {
     const element = event.target as HTMLInputElement;
     this.facade.updateSearch(element.value);
-  }
-
-  confirmClose(id: string): void {
-    this.confirmationService.confirm({
-      message: 'Les participants seront notifiés des résultats. Cette action est irréversible.',
-      header: 'Clôturer ce sondage ?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Clôturer',
-      rejectLabel: 'Annuler',
-      accept: () => this.facade.closePoll(id),
-    });
-  }
-
-  confirmDelete(id: string): void {
-    this.confirmationService.confirm({
-      message: 'Le sondage et tous ses votes seront définitivement supprimés.',
-      header: 'Supprimer ce sondage ?',
-      icon: 'pi pi-trash',
-      acceptLabel: 'Supprimer',
-      rejectLabel: 'Annuler',
-      accept: () => this.facade.deletePoll(id),
-    });
-  }
-
-  protected getStatusLabel(status: PollStatus): string {
-    switch (status) {
-      case 'active':
-        return 'Actif';
-      case 'closed':
-        return 'Clos';
-      case 'pending':
-        return 'En attente';
-      default:
-        return status;
-    }
-  }
-
-  protected getStatusBadgeClasses(status: PollStatus): string {
-    switch (status) {
-      case 'active':
-        return 'bg-emerald-50 text-emerald-600';
-      case 'closed':
-        return 'bg-red-50 text-red-600';
-      case 'pending':
-        return 'bg-orange-50 text-orange-600';
-      default:
-        return 'bg-surface-100 text-muted-color';
-    }
-  }
-
-  // --- PAGINATION ---
-  get currentPage(): number {
-    const state = this.facade.state();
-    return state.type === 'SUCCESS'
-      ? this.facade.paginatedPolls().length > 0
-        ? this.facade.currentPage()
-        : 1
-      : 1;
-  }
-
-  get totalPages(): number {
-    const state = this.facade.state();
-    if (state.type !== 'SUCCESS') return 1;
-    return Math.max(1, Math.ceil(this.facade.totalRecords() / this.facade.pageSize()));
-  }
-
-  get hasNextPage(): boolean {
-    return this.currentPage < this.totalPages;
-  }
-  get hasPreviousPage(): boolean {
-    return this.currentPage > 1;
-  }
-
-  nextPage(): void {
-    if (this.hasNextPage) this.facade.changePage(this.currentPage + 1);
-  }
-
-  previousPage(): void {
-    if (this.hasPreviousPage) this.facade.changePage(this.currentPage - 1);
   }
 }

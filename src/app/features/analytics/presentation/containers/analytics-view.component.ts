@@ -1,4 +1,4 @@
-import { Component, OnInit, signal, inject } from '@angular/core';
+import { Component, inject, OnInit, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink } from '@angular/router';
 import { MessageService } from 'primeng/api';
@@ -7,9 +7,8 @@ import { AnalyticsFacade } from '../facade/analytics.facade';
 
 @Component({
   selector: 'app-analytics-view',
-  standalone: true,
   imports: [CommonModule, ToastModule, RouterLink],
-  providers: [AnalyticsFacade, MessageService],
+  providers: [MessageService],
   template: `
     <div class="container py-8 mx-auto max-w-300">
       <p-toast></p-toast>
@@ -75,7 +74,7 @@ import { AnalyticsFacade } from '../facade/analytics.facade';
             </h2>
 
             <div class="flex items-end gap-3 h-48">
-              @for (d of facade.weeklyData(); track d.day) {
+              @for (d of facade.weeklyDataView(); track d.day) {
                 <div class="flex-1 flex flex-col items-center gap-2 h-full justify-end group">
                   <span
                     class="text-xs font-bold text-gray-900 opacity-0 group-hover:opacity-100 transition-opacity mb-1"
@@ -85,7 +84,7 @@ import { AnalyticsFacade } from '../facade/analytics.facade';
                   <div
                     class="w-full max-w-12 bg-primary/80 rounded-t-md transition-all duration-1000 ease-out hover:bg-primary"
                     [ngStyle]="{
-                      height: showBars() ? (d.votes / facade.maxVotes()) * 100 + '%' : '0%',
+                      height: showBars() ? d.heightPercentage + '%' : '0%',
                     }"
                   ></div>
 
@@ -155,7 +154,6 @@ export class AnalyticsViewComponent implements OnInit {
   public readonly showBars = signal(false);
 
   ngOnInit(): void {
-    this.facade.loadAnalytics();
     // Déclenchement de l'animation de croissance des barres après rendu des données
     setTimeout(() => {
       this.showBars.set(true);

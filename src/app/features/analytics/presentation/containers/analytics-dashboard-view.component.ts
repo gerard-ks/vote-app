@@ -5,9 +5,7 @@ import { AnalyticsDashboardFacade } from '../facade/analytics-dashboard.facade';
 
 @Component({
   selector: 'app-analytics-dashboard-view',
-  standalone: true,
   imports: [CommonModule, RouterLink],
-  providers: [AnalyticsDashboardFacade],
   template: `
     <div class="mb-8">
       <h1 class="text-2xl md:text-3xl font-bold text-foreground mb-8">Dashboard Admin</h1>
@@ -99,10 +97,6 @@ import { AnalyticsDashboardFacade } from '../facade/analytics-dashboard.facade';
     </div>
   `,
 })
-export class AnalyticsDashboardViewComponent implements OnInit {
+export class AnalyticsDashboardViewComponent  {
   protected readonly facade = inject(AnalyticsDashboardFacade);
-
-  ngOnInit(): void {
-    this.facade.loadDashboard();
-  }
 }

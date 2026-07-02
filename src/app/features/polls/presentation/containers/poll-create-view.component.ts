@@ -1,4 +1,4 @@
-import { Component, inject, OnInit } from '@angular/core';
+import { Component, inject } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
@@ -7,7 +7,6 @@ import { PollCreateFacade } from '../facade/poll-create.facade';
 @Component({
   selector: 'app-poll-create-view',
   imports: [CommonModule, FormsModule, ButtonModule],
-  providers: [PollCreateFacade],
   template: `
     <div class="max-w-xl mx-auto py-8 md:py-12 font-sans box-border animate-fade-in">
       <button
@@ -194,11 +193,6 @@ import { PollCreateFacade } from '../facade/poll-create.facade';
     </div>
   `,
 })
-export class PollCreateViewComponent implements OnInit {
+export class PollCreateViewComponent {
   protected readonly facade = inject(PollCreateFacade);
-
-  public ngOnInit(): void {
-    // Initialise les guards de rôles à l'ouverture du composant
-    this.facade.init();
-  }
 }

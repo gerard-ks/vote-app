@@ -5,8 +5,8 @@ import { CardModule } from 'primeng/card';
 import { ButtonModule } from 'primeng/button';
 import { RouterLink } from '@angular/router';
 import { PollListFacade } from '../facade/poll-list.facade';
-import { POLL_FILTER_CONFIG } from '../../polls.constants';
-import { PollCardComponent } from '@features/polls/presentation/dumb/poll-card.component';
+import { POLL_FILTER_CONFIG } from '../constants/polls.constants';
+import { PollCardComponent } from '@features/polls/presentation/components/poll-card.component';
 import { AuthStore } from '@store/auth/auth.store';
 
 @Component({
@@ -123,8 +123,8 @@ import { AuthStore } from '@store/auth/auth.store';
           @if (facade.pageItems().length > 0) {
             <div class="flex flex-col gap-6">
               <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                @for (poll of facade.pageItems(); track poll.id) {
-                  <app-poll-card [poll]="poll" [index]="$index"></app-poll-card>
+                @for (pollView of facade.pageItemViews(); track pollView.id) {
+                  <app-poll-card [poll]="pollView" [index]="$index"></app-poll-card>
                 }
               </div>
 

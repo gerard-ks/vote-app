@@ -10,14 +10,14 @@ export const POLLS_ADMIN_ROUTES: Routes = [
       {
         path: '',
         loadComponent: () =>
-          import('@pages/dashboard/admin-moderation-page.component').then(
+          import('@features/polls/presentation/pages/admin-moderation-page.component').then(
             (m) => m.AdminModerationPageComponent,
           ),
       },
       {
         path: 'sondage/:id',
         loadComponent: () =>
-          import('@pages/polls/poll-detail-page.component').then((m) => m.PollDetailPageComponent),
+          import('@features/polls/presentation/pages/poll-detail-page.component').then((m) => m.PollDetailPageComponent),
       },
     ],
   },

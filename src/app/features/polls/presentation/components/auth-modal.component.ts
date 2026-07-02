@@ -1,12 +1,10 @@
-import { Component, model, input, inject } from '@angular/core';
-import { Router } from '@angular/router';
+import { Component, model, input, output } from '@angular/core';
 import { DialogModule } from 'primeng/dialog';
 import { ButtonModule } from 'primeng/button';
 import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-auth-modal',
-  standalone: true,
   imports: [CommonModule, DialogModule, ButtonModule],
   template: `
     <p-dialog
@@ -34,14 +32,14 @@ import { CommonModule } from '@angular/common';
           label="Se connecter"
           severity="primary"
           styleClass="w-full justify-center font-bold"
-          (click)="navigate('/auth/login')"
+          (click)="onLoginClick()"
         />
         <p-button
           label="S'inscrire"
           variant="outlined"
           severity="secondary"
           styleClass="w-full justify-center font-bold"
-          (click)="navigate('/auth/login', { mode: 'register' })"
+          (click)="onRegisterClick()"
         />
       </div>
     </p-dialog>
@@ -50,13 +48,18 @@ import { CommonModule } from '@angular/common';
 export class AuthModalComponent {
   // Le model() permet un binding bidirectionnel propre depuis le parent : [(visible)]="isModalOpen"
   public readonly visible = model<boolean>(false);
-
   public readonly message = input<string>('Vous devez être connecté pour voter.');
 
-  private readonly router = inject(Router);
+  public readonly loginRequested = output<void>();
+  public readonly registerRequested = output<void>();
 
-  protected navigate(path: string, queryParams?: any): void {
+  protected onLoginClick(): void {
     this.visible.set(false);
-    void this.router.navigate([path], { queryParams });
+    this.loginRequested.emit(); // "Hey parent, l'utilisateur veut se connecter !"
+  }
+
+  protected onRegisterClick(): void {
+    this.visible.set(false);
+    this.registerRequested.emit(); // "Hey parent, l'utilisateur veut s'inscrire !"
   }
 }

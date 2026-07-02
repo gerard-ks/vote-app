@@ -1,16 +1,17 @@
-import { Component, inject } from '@angular/core';
-import { PollListViewComponent } from '@features/polls/presentation/smart/poll-list-view.component';
+import { Component, inject, OnInit } from '@angular/core';
+import { PollListViewComponent } from '@features/polls/presentation/containers/poll-list-view.component';
 import { PollListFacade } from '@features/polls/presentation/facade/poll-list.facade';
 
 @Component({
   selector: 'app-poll-list-page',
   template: `<app-poll-list-view></app-poll-list-view>`,
+  providers: [PollListFacade],
   imports: [PollListViewComponent],
 })
-export class PollListPageComponent {
+export class PollListPageComponent implements OnInit {
   private readonly facade = inject(PollListFacade);
 
-  constructor() {
+  public ngOnInit(): void {
     this.facade.initPage();
   }
 }

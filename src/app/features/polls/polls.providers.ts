@@ -6,6 +6,5 @@ import { PollListFacade } from '@features/polls/presentation/facade/poll-list.fa
 export const providePollFeature = (): Provider[] => {
   return [
     { provide: PollRepository, useClass: PollMockService },
-    PollListFacade,
   ];
 };

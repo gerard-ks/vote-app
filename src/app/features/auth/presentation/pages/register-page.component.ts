@@ -1,5 +1,5 @@
 import { Component } from '@angular/core';
-import { AuthBoxComponent } from '@features/auth/presentation/components/auth-box/auth-box.component';
+import { AuthBoxComponent } from '@features/auth/presentation/containers/auth-box/auth-box.component';
 
 @Component({
   selector: 'app-register-page',

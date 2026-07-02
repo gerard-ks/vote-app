@@ -4,13 +4,16 @@ import { catchError, tap } from 'rxjs/operators';
 import { EMPTY } from 'rxjs';
 import { PollRepository } from '../../domain/poll.repository';
 import { Poll } from '../../domain/poll.entity';
-import { PollFilterType } from '../../polls.constants';
+import { PollFilterType } from '../constants/polls.constants';
 import { ViewState } from '@core/models/view-state.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { mapPollToCardView } from '@features/polls/presentation/components/poll-card.ui-model';
+import { AuthStore } from '@store/auth/auth.store';
 
 @Injectable()
 export class PollListFacade {
   private readonly repository = inject(PollRepository);
+  private readonly authStore = inject(AuthStore);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -42,6 +45,11 @@ export class PollListFacade {
     const limit = this.itemsPerPage();
     const start = pageIdx * limit;
     return filteredList.slice(start, start + limit);
+  });
+
+  public readonly pageItemViews = computed(() => {
+    const isAuth = this.authStore.isAuthenticated();
+    return this.pageItems().map((poll) => mapPollToCardView(poll, isAuth));
   });
 
   public readonly pagesTimeline = computed<(number | 'ellipsis-l' | 'ellipsis-r')[]>(() => {
@@ -104,9 +112,5 @@ export class PollListFacade {
     if (targetPage !== this.currentPage()) {
       this.currentPage.set(targetPage);
     }
-  }
-
-  public navigateToDetail(pollId: string): void {
-    void this.router.navigate(['/sondage', pollId]);
   }
 }

@@ -9,9 +9,29 @@ import { PollRepository } from '../../domain/poll.repository';
 import { Poll } from '../../domain/poll.entity';
 import { ViewState } from '@core/models/view-state.model';
 
+export interface PollOptionView {
+  id: string;
+  text: string;
+  votes: number;
+  percentage: number;
+  isLeader: boolean;
+}
+
+export interface PollDetailView {
+  title: string;
+  status: 'active' | 'closed' | 'pending';
+  statusBadgeText: string;
+  statusBadgeClass: string;
+  createdAtText: string;
+  createdByText: string;
+  expiresAtText: string;
+  totalVotes: number;
+  options: PollOptionView[];
+}
+
 @Injectable()
 export class PollDetailFacade {
-  // ─── INJECTIONS ───
+
   private readonly repository = inject(PollRepository);
   private readonly route = inject(ActivatedRoute);
   private readonly router = inject(Router);
@@ -20,7 +40,7 @@ export class PollDetailFacade {
   private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
 
-  // ─── ÉTAT LOCAL (STATE) ───
+  // ÉTAT LOCAL (STATE)
   private readonly _state = signal<ViewState<Poll>>({ type: 'IDLE' });
   public readonly state = this._state.asReadonly();
 
@@ -28,18 +48,16 @@ export class PollDetailFacade {
   public readonly hasVoted = signal<boolean>(false);
   private readonly _localStatus = signal<'active' | 'closed' | 'pending' | null>(null);
 
-  // ─── ÉTATS DÉRIVÉS (COMPUTED) ───
+  // ÉTATS DÉRIVÉS (COMPUTED)
   public readonly currentPoll = computed(() => {
     const currentState = this.state();
     return currentState.type === 'SUCCESS' ? currentState.data : null;
   });
 
-  // Gère la clôture instantanée côté client sans attendre le rechargement backend
   public readonly effectiveStatus = computed(() => {
     return this._localStatus() ?? this.currentPoll()?.status;
   });
 
-  // Vérification des droits d'administration (Créateur ou Admin)
   public readonly canManage = computed(() => {
     const poll = this.currentPoll();
     const session = this.authStore.session();
@@ -48,7 +66,6 @@ export class PollDetailFacade {
     return poll.createdBy === session.name || this.authStore.isAdmin();
   });
 
-  // Règle d'affichage conditionnel des barres de progression
   public readonly showResults = computed(() => {
     const poll = this.currentPoll();
     if (!poll) return false;
@@ -66,7 +83,54 @@ export class PollDetailFacade {
     return Math.max(...poll.options.map((o) => o.votes));
   });
 
-  // ─── CYCLE DE VIE & ACCÈS DONNÉES ───
+  // RELAIS DU STORE D'AUTHENTIFICATION
+  public readonly isAuthenticated = computed(() => this.authStore.isAuthenticated());
+  public readonly isEmailVerified = computed(
+    () => this.authStore.session()?.emailVerified ?? false,
+  );
+
+  // LE CERVEAU QUI PRÉPARE LA DONNÉE POUR LE HTML
+  public readonly pollView = computed<PollDetailView | null>(() => {
+    const poll = this.currentPoll();
+    if (!poll) return null;
+
+    const isClosed = poll.status === 'closed';
+    const isActive = poll.status === 'active';
+
+    const createdAtDate = new Date(poll.createdAt).toLocaleDateString('fr-FR');
+    const expiresAtDate = new Date(poll.expiresAt).toLocaleDateString('fr-FR');
+
+    let expiresAtText = `Expire le ${expiresAtDate}`;
+    if (isClosed) expiresAtText = `Clos le ${expiresAtDate}`;
+    if (poll.status === 'pending') expiresAtText = `Démarre le ${createdAtDate}`;
+
+    const maxV = this.maxVotes();
+    const total = poll.totalVotes;
+
+    return {
+      title: poll.title,
+      status: poll.status,
+      statusBadgeText: isClosed ? 'Clos' : isActive ? 'Actif' : 'En attente',
+      statusBadgeClass: isActive
+        ? 'bg-emerald-50 text-emerald-600'
+        : isClosed
+          ? 'bg-red-50 text-red-600'
+          : 'bg-orange-50 text-orange-600',
+      createdAtText: createdAtDate,
+      createdByText: `par @${poll.createdBy}`,
+      expiresAtText,
+      totalVotes: total,
+      options: poll.options.map((opt) => ({
+        id: opt.id,
+        text: opt.text,
+        votes: opt.votes,
+        percentage: total > 0 ? Math.round((opt.votes / total) * 100) : 0,
+        isLeader: total > 0 && opt.votes === maxV && maxV > 0,
+      })),
+    };
+  });
+
+  // CYCLE DE VIE & ACCÈS DONNÉES
   public initPage(): void {
     this._state.set({ type: 'LOADING' });
     const pollId = this.route.snapshot.paramMap.get('id');
@@ -79,7 +143,7 @@ export class PollDetailFacade {
     this.repository
       .getById(pollId)
       .pipe(
-        takeUntilDestroyed(this.destroyRef), // Empêche les fuites de mémoire
+        takeUntilDestroyed(this.destroyRef),
         tap((poll) => {
           if (!poll) {
             this._state.set({ type: 'EMPTY' });
@@ -95,7 +159,7 @@ export class PollDetailFacade {
       .subscribe();
   }
 
-  // ─── ACTIONS MÉTIERS ───
+  //  ACTIONS MÉTIERS
   public submitVote(): void {
     const optionId = this.selectedOption();
     const pollId = this.currentPoll()?.id;
@@ -113,13 +177,11 @@ export class PollDetailFacade {
 
     if (!optionId || !pollId) return;
 
-    // Affichage immédiat d'un état de chargement global si besoin, ou juste Optimistic UI
     this.repository
       .vote(pollId, optionId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updatedPoll) => {
-          // Met à jour le signal avec les nouvelles données du serveur (les votes recalculés)
           this._state.set({ type: 'SUCCESS', data: updatedPoll });
           this.hasVoted.set(true);
           this.showToast('success', 'A voté !', 'Votre vote a été enregistré avec succès.');
@@ -150,7 +212,6 @@ export class PollDetailFacade {
     const pollId = this.currentPoll()?.id;
     if (!pollId) return;
 
-    // Optimistic UI : on modifie l'affichage instantanément
     this._localStatus.set('closed');
 
     this.repository
@@ -158,7 +219,6 @@ export class PollDetailFacade {
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updatedPoll) => {
-          // Consolidation avec la vraie donnée serveur
           this._state.set({ type: 'SUCCESS', data: updatedPoll });
           this.showToast(
             'success',
@@ -167,7 +227,6 @@ export class PollDetailFacade {
           );
         },
         error: () => {
-          // Rollback en cas d'erreur
           this._localStatus.set(null);
           this.showToast('error', 'Erreur', 'Impossible de clôturer le sondage.');
         },
@@ -210,26 +269,29 @@ export class PollDetailFacade {
   }
 
   public goBack(): void {
-    // 1. Sécurité de base
     if (!this.authStore.isAuthenticated()) {
       void this.router.navigate(['/']);
       return;
     }
 
-    // 2. On lit l'état du routeur Angular pour savoir si on a un historique interne
     const navigationId = window.history.state?.navigationId;
-
     if (navigationId && navigationId > 1) {
-      // Magie native : renvoie exactement d'où tu viens (/member/mes-votes ou /member)
       window.history.back();
     } else {
-      // Fallback de sécurité : si l'utilisateur a rafraîchi la page
-      // ou copié/collé le lien direct vers le sondage
       void this.router.navigate(['/member']);
     }
   }
 
-  // ─── UTILITAIRES ───
+  // Routage pour la modale d'authentification
+  public goToLogin(): void {
+    void this.router.navigate(['/auth/login']);
+  }
+
+  public goToRegister(): void {
+    void this.router.navigate(['/auth/register', { mode: 'register' }]);
+  }
+
+  //  UTILITAIRES
   private showToast(severity: 'success' | 'warn' | 'error', summary: string, detail: string): void {
     this.messageService.add({ severity, summary, detail, life: 3000 });
   }

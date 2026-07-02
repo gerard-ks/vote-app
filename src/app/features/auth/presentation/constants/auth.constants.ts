@@ -1,4 +1,8 @@
-import { DemoAccountView } from '../models/auth-view.model';
+export interface DemoAccountView {
+  label: string;
+  role: string;
+  email: string;
+}
 
 export const DEMO_ACCOUNTS: DemoAccountView[] = [
   { label: 'Alice', role: 'Créateur', email: 'alice@example.com' },
