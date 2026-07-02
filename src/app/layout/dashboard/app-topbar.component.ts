@@ -4,11 +4,10 @@ import { Router, NavigationEnd } from '@angular/router';
 import { filter, map } from 'rxjs/operators';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { ButtonModule } from 'primeng/button';
-import { AuthStore } from '../../store/auth/auth.store';
+import { AuthStore } from '@store/auth/auth.store';
 
 @Component({
   selector: 'app-topbar',
-  standalone: true,
   imports: [CommonModule, ButtonModule],
   template: `
     <header

@@ -9,7 +9,6 @@ import { AppSidebarComponent } from '../dashboard/app-sidebar.component';
 
 @Component({
   selector: 'app-dashboard-layout',
-  standalone: true,
   imports: [CommonModule, RouterOutlet, AppTopbarComponent, FooterComponent, AppSidebarComponent],
   template: `
     <div class="flex h-screen w-full bg-surface text-color font-sans overflow-hidden">

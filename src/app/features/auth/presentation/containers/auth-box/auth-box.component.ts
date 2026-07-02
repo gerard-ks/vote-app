@@ -267,23 +267,25 @@ export class AuthBoxComponent {
   protected onSubmit(): void {
     if (this.authForm.invalid) return;
 
-    // On récupère toutes les valeurs du formulaire proprement
     const formValues = this.authForm.getRawValue();
 
     if (this.mode() === 'login') {
-      // 1. Cas Connexion : On délègue à la façade
-      this.facade.login(formValues.email);
+      this.facade.login(formValues.email, (role) => {
+        void this.router.navigate([role === 'admin' ? '/admin/dashboard' : '/member']);
+      });
     } else {
-      // 2. Cas Inscription : On vérifie que le nom n'est pas vide
       if (!formValues.name.trim()) {
         this.authForm.controls.name.setErrors({ required: true });
         return;
       }
-      // On délègue à la façade
+
       this.facade.register(
         formValues.name,
         formValues.email,
         formValues.role as 'participant' | 'creator',
+        () => {
+          void this.router.navigate(['/member']);
+        },
       );
     }
   }

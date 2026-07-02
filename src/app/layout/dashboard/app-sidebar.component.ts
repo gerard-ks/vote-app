@@ -2,7 +2,7 @@ import { Component, inject, computed, input } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { RouterLink, RouterLinkActive, Router } from '@angular/router';
 import { ButtonModule } from 'primeng/button';
-import { AuthStore } from '../../store/auth/auth.store';
+import { AuthStore } from '@store/auth/auth.store';
 
 interface NavItem {
   title: string;
@@ -12,7 +12,6 @@ interface NavItem {
 
 @Component({
   selector: 'app-sidebar',
-  standalone: true,
   imports: [CommonModule, RouterLink, RouterLinkActive, ButtonModule],
   host: {
     // LE SECRET ABSOLU : Rend la balise <app-sidebar> invisible pour le Flexbox parent.

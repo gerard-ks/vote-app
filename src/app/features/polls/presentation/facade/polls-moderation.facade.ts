@@ -1,5 +1,5 @@
 import { Injectable, signal, computed, inject, DestroyRef } from '@angular/core';
-import { ConfirmationService, MessageService } from 'primeng/api';
+import { MessageService } from 'primeng/api';
 import { PollRepository } from '../../domain/poll.repository';
 import { Poll, PollStatus } from '../../domain/poll.entity';
 import { ViewState } from '@core/models/view-state.model';
