@@ -8,6 +8,7 @@ import { PollListFacade } from '../facade/poll-list.facade';
 import { POLL_FILTER_CONFIG } from '../constants/polls.constants';
 import { PollCardComponent } from '@features/polls/presentation/components/poll-card.component';
 import { AuthStore } from '@store/auth/auth.store';
+import { ThemeColor } from '@shared/models/ui.models';
 
 @Component({
   selector: 'app-poll-list-view',
@@ -227,16 +228,30 @@ export class PollListViewComponent {
       if (isActive) {
         badgeClass += 'bg-primary text-primary-contrast';
       } else {
-        const colors: Record<string, string> = {
-          active: 'bg-emerald-50 text-emerald-600',
-          closed: 'bg-red-50 text-red-600',
-          pending: 'bg-orange-50 text-orange-600',
-          all: 'bg-slate-100 text-slate-500',
+        const themeMap: Record<string, ThemeColor> = {
+          active: 'success',
+          closed: 'danger',
+          pending: 'warning',
+          all: 'neutral',
         };
-        badgeClass += colors[value] ?? colors['all'];
+        const theme = themeMap[value] || 'neutral';
+        badgeClass += this.getBadgeThemeClass(theme);
       }
 
       return { ...option, count, badgeClass };
     });
   });
+
+  private getBadgeThemeClass(theme: ThemeColor): string {
+    switch (theme) {
+      case 'success':
+        return 'bg-emerald-50 text-emerald-600';
+      case 'danger':
+        return 'bg-red-50 text-red-600';
+      case 'warning':
+        return 'bg-orange-50 text-orange-600';
+      default:
+        return 'bg-slate-100 text-slate-500';
+    }
+  }
 }

@@ -2,11 +2,12 @@
   import { CommonModule } from '@angular/common';
   import { ButtonModule } from 'primeng/button';
   import { ConfirmPopupModule } from 'primeng/confirmpopup';
-  import { PollDetailFacade, ThemeColor } from '../facade/poll-detail.facade';
+  import { PollDetailFacade } from '../facade/poll-detail.facade';
   import { VoteProgressBarComponent } from '@features/polls/presentation/components/vote-progress-bar.component';
   import { AuthModalComponent } from '@features/polls/presentation/components/auth-modal.component';
   import { ConfirmationService, MessageService } from 'primeng/api';
   import { Router } from '@angular/router';
+  import { ThemeColor } from '@shared/models/ui.models';
 
   @Component({
     selector: 'app-poll-detail-view',

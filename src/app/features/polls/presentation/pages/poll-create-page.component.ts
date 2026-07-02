@@ -1,6 +1,7 @@
 import { PollCreateViewComponent } from '@features/polls/presentation/containers/poll-create-view.component';
 import { Component, inject, OnInit } from '@angular/core';
 import { PollCreateFacade } from '@features/polls/presentation/facade/poll-create.facade';
+import { Router } from '@angular/router';
 
 @Component({
   selector: 'app-poll-create-page',
@@ -10,8 +11,16 @@ import { PollCreateFacade } from '@features/polls/presentation/facade/poll-creat
 })
 export class PollCreatePageComponent implements OnInit {
   private readonly facade = inject(PollCreateFacade);
+  private readonly router = inject(Router);
 
   public ngOnInit(): void {
-    this.facade.init();
+    this.facade.checkAccess(
+      () => {
+        void this.router.navigate(['/auth/login']);
+      }, // Si non connecté
+      () => {
+        void this.router.navigate(['/member']);
+      }, // Si non autorisé
+    );
   }
 }

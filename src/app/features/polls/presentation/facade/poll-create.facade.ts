@@ -1,6 +1,4 @@
 import { Injectable, signal, computed, inject, DestroyRef } from '@angular/core';
-import { Router } from '@angular/router';
-import { Location } from '@angular/common';
 import { MessageService } from 'primeng/api';
 import { AuthStore } from '@store/auth/auth.store';
 import { PollRepository } from '@features/polls/domain/poll.repository';
@@ -8,14 +6,12 @@ import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 
 @Injectable()
 export class PollCreateFacade {
-  private readonly router = inject(Router);
-  private readonly location = inject(Location);
   private readonly authStore = inject(AuthStore);
   private readonly messageService = inject(MessageService);
   private readonly repository = inject(PollRepository);
   private readonly destroyRef = inject(DestroyRef);
 
-  // ─── ÉTAT LOCAL (Équivalent des useState) ───
+  // ÉTAT LOCAL
   public readonly title = signal<string>('');
   public readonly options = signal<string[]>(['', '']);
   public readonly expiresAt = signal<string>('');
@@ -24,25 +20,7 @@ export class PollCreateFacade {
   public readonly activePollsCount = signal<number>(7); // Mock
   public readonly isSubmitting = signal<boolean>(false);
 
-  // ─── CYCLE DE VIE (Équivalent du useEffect) ───
-  public init(): void {
-    if (!this.authStore.isAuthenticated()) {
-      void this.router.navigate(['/auth/login']);
-      return;
-    }
-
-    // Seuls les créateurs (non dashboard) peuvent créer
-    if (!this.authStore.canCreate()) {
-      this.messageService.add({
-        severity: 'error',
-        summary: 'Accès refusé',
-        detail: 'Seuls les créateurs peuvent créer un sondage.',
-      });
-      void this.router.navigate(['/member']);
-    }
-  }
-
-  // ─── DÉRIVATION RÉACTIVE (Validation à la volée) ───
+  // DÉRIVATION RÉACTIVE (Validation à la volée)
   public readonly errors = computed(() => {
     const err: Record<string, string> = {};
 
@@ -68,7 +46,24 @@ export class PollCreateFacade {
     return err;
   });
 
-  // ─── MUTATIONS ───
+  // ACCÈS (Sécurité métier par callback)
+  public checkAccess(onUnauthenticated: () => void, onDenied: () => void): void {
+    if (!this.authStore.isAuthenticated()) {
+      onUnauthenticated();
+      return;
+    }
+
+    if (!this.authStore.canCreate()) {
+      this.messageService.add({
+        severity: 'error',
+        summary: 'Accès refusé',
+        detail: 'Seuls les créateurs peuvent créer un sondage.',
+      });
+      onDenied();
+    }
+  }
+
+  // MUTATIONS
   public addOption(): void {
     if (this.options().length >= 10) return;
     this.options.update((opts) => [...opts, '']);
@@ -87,9 +82,8 @@ export class PollCreateFacade {
     });
   }
 
-  // ─── SOUMISSION ───
-  public submit(): void {
-    // Force la validation au clic
+  // SOUMISSION (Callback pour la navigation)
+  public submit(onSuccess: () => void): void {
     const currentErrors = this.errors();
     const isTitleEmpty = this.title().trim().length === 0;
     const isDateEmpty = this.expiresAt().length === 0;
@@ -121,13 +115,12 @@ export class PollCreateFacade {
 
     this.isSubmitting.set(true);
 
-    // Simulation d'appel API
     const payload = {
       title: this.title().trim(),
       options: validOptions.map((text) => ({ text, votes: 0, id: crypto.randomUUID() })),
       expiresAt: this.expiresAt(),
       showResultsBeforeClose: this.showResults(),
-      createdBy: session.name, // On lie le sondage au créateur
+      createdBy: session.name,
     };
 
     this.repository
@@ -141,7 +134,7 @@ export class PollCreateFacade {
             summary: 'Sondage créé',
             detail: 'Votre sondage est maintenant en ligne !',
           });
-          void this.router.navigate(['/member']);
+          onSuccess(); // Délégation de la navigation
         },
         error: () => {
           this.isSubmitting.set(false);
@@ -152,9 +145,5 @@ export class PollCreateFacade {
           });
         },
       });
-  }
-
-  public goBack(): void {
-    this.location.back();
   }
 }

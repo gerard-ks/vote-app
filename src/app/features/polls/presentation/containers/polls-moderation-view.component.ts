@@ -7,6 +7,7 @@ import { ConfirmDialogModule } from 'primeng/confirmdialog';
 import { ToastModule } from 'primeng/toast';
 import { InputTextModule } from 'primeng/inputtext';
 import { PollsModerationFacade } from '../facade/polls-moderation.facade';
+import { ThemeColor } from '@shared/models/ui.models';
 
 @Component({
   selector: 'app-polls-moderation-view',
@@ -101,7 +102,7 @@ import { PollsModerationFacade } from '../facade/polls-moderation.facade';
                       </h3>
                       <span
                         class="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wide shrink-0"
-                        [ngClass]="pollView.statusBadgeClass"
+                        [ngClass]="getBadgeClass(pollView.statusTheme)"
                       >
                         {{ pollView.statusLabel }}
                       </span>
@@ -124,7 +125,7 @@ import { PollsModerationFacade } from '../facade/polls-moderation.facade';
 
                     @if (pollView.status === 'active') {
                       <button
-                        (click)="facade.confirmClose(pollView.id)"
+                        (click)="confirmClose(pollView.id)"
                         class="rounded-md p-2 text-yellow-500 hover:bg-yellow-50 border-none bg-transparent cursor-pointer transition-colors"
                         title="Clôturer"
                       >
@@ -133,7 +134,7 @@ import { PollsModerationFacade } from '../facade/polls-moderation.facade';
                     }
 
                     <button
-                      (click)="facade.confirmDelete(pollView.id)"
+                      (click)="confirmDelete(pollView.id)"
                       class="rounded-md p-2 text-red-500 hover:bg-red-50 border-none bg-transparent cursor-pointer transition-colors"
                       title="Supprimer"
                     >
@@ -174,6 +175,7 @@ import { PollsModerationFacade } from '../facade/polls-moderation.facade';
 })
 export class PollsModerationViewComponent {
   protected readonly facade = inject(PollsModerationFacade);
+  private readonly confirmationService = inject(ConfirmationService);
 
   public readonly statuses = [
     { label: 'Tous', value: 'all' },
@@ -182,8 +184,43 @@ export class PollsModerationViewComponent {
     { label: 'En attente', value: 'pending' },
   ];
 
+  protected getBadgeClass(theme: ThemeColor): string {
+    switch (theme) {
+      case 'success':
+        return 'bg-emerald-50 text-emerald-600';
+      case 'danger':
+        return 'bg-red-50 text-red-600';
+      case 'warning':
+        return 'bg-orange-50 text-orange-600';
+      default:
+        return 'bg-gray-100 text-gray-600';
+    }
+  }
+
   onSearch(event: Event): void {
     const element = event.target as HTMLInputElement;
     this.facade.updateSearch(element.value);
+  }
+
+  confirmClose(id: string): void {
+    this.confirmationService.confirm({
+      message: 'Les participants seront notifiés des résultats. Cette action est irréversible.',
+      header: 'Clôturer ce sondage ?',
+      icon: 'pi pi-exclamation-triangle',
+      acceptLabel: 'Clôturer',
+      rejectLabel: 'Annuler',
+      accept: () => this.facade.closePoll(id),
+    });
+  }
+
+  confirmDelete(id: string): void {
+    this.confirmationService.confirm({
+      message: 'Le sondage et tous ses votes seront définitivement supprimés.',
+      header: 'Supprimer ce sondage ?',
+      icon: 'pi pi-trash',
+      acceptLabel: 'Supprimer',
+      rejectLabel: 'Annuler',
+      accept: () => this.facade.deletePoll(id),
+    });
   }
 }

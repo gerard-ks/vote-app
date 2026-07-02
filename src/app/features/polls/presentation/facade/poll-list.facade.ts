@@ -1,5 +1,4 @@
 import { inject, Injectable, signal, computed, DestroyRef } from '@angular/core';
-import { Router } from '@angular/router';
 import { catchError, tap } from 'rxjs/operators';
 import { EMPTY } from 'rxjs';
 import { PollRepository } from '../../domain/poll.repository';
@@ -14,7 +13,6 @@ import { AuthStore } from '@store/auth/auth.store';
 export class PollListFacade {
   private readonly repository = inject(PollRepository);
   private readonly authStore = inject(AuthStore);
-  private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly _state = signal<ViewState<Poll[]>>({ type: 'IDLE' });

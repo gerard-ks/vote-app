@@ -4,13 +4,14 @@ import { PollRepository } from '../../domain/poll.repository';
 import { Poll, PollStatus } from '../../domain/poll.entity';
 import { ViewState } from '@core/models/view-state.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ThemeColor } from '@shared/models/ui.models';
 
 export interface PollModerationView {
   id: string;
   title: string;
   status: PollStatus;
   statusLabel: string;
-  statusBadgeClass: string;
+  statusTheme: ThemeColor;
   createdBy: string;
   totalVotes: number;
   createdAtText: string;
@@ -20,7 +21,6 @@ export interface PollModerationView {
 export class PollsModerationFacade {
   private readonly repository = inject(PollRepository);
   private readonly messageService = inject(MessageService);
-  private readonly confirmationService = inject(ConfirmationService);
   private readonly destroyRef = inject(DestroyRef);
 
   private readonly _state = signal<ViewState<Poll[]>>({ type: 'IDLE' });
@@ -79,12 +79,8 @@ export class PollsModerationFacade {
       status: poll.status,
       statusLabel:
         poll.status === 'active' ? 'Actif' : poll.status === 'closed' ? 'Clos' : 'En attente',
-      statusBadgeClass:
-        poll.status === 'active'
-          ? 'bg-emerald-50 text-emerald-600'
-          : poll.status === 'closed'
-            ? 'bg-red-50 text-red-600'
-            : 'bg-orange-50 text-orange-600',
+      statusTheme:
+        poll.status === 'active' ? 'success' : poll.status === 'closed' ? 'danger' : 'warning',
       createdBy: poll.createdBy,
       totalVotes: poll.totalVotes,
       createdAtText: new Date(poll.createdAt).toLocaleDateString('fr-FR'),
@@ -118,29 +114,7 @@ export class PollsModerationFacade {
     this._currentPage.set(page);
   }
 
-  public confirmClose(id: string): void {
-    this.confirmationService.confirm({
-      message: 'Les participants seront notifiés des résultats. Cette action est irréversible.',
-      header: 'Clôturer ce sondage ?',
-      icon: 'pi pi-exclamation-triangle',
-      acceptLabel: 'Clôturer',
-      rejectLabel: 'Annuler',
-      accept: () => this.closePoll(id),
-    });
-  }
-
-  public confirmDelete(id: string): void {
-    this.confirmationService.confirm({
-      message: 'Le sondage et tous ses votes seront définitivement supprimés.',
-      header: 'Supprimer ce sondage ?',
-      icon: 'pi pi-trash',
-      acceptLabel: 'Supprimer',
-      rejectLabel: 'Annuler',
-      accept: () => this.deletePoll(id),
-    });
-  }
-
-  private closePoll(id: string): void {
+  public closePoll(id: string): void {
     this.repository
       .closePoll(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
@@ -160,7 +134,7 @@ export class PollsModerationFacade {
       });
   }
 
-  private deletePoll(id: string): void {
+  public deletePoll(id: string): void {
     this.repository
       .deletePoll(id)
       .pipe(takeUntilDestroyed(this.destroyRef))

@@ -7,6 +7,7 @@ import { AuthStore } from '@store/auth/auth.store';
 import { PollRepository } from '../../domain/poll.repository';
 import { Poll } from '../../domain/poll.entity';
 import { ViewState } from '@core/models/view-state.model';
+import { ThemeColor } from '@shared/models/ui.models';
 
 export interface PollOptionView {
   id: string;
@@ -15,8 +16,6 @@ export interface PollOptionView {
   percentage: number;
   isLeader: boolean;
 }
-
-export type ThemeColor = 'success' | 'danger' | 'warning' | 'neutral';
 
 export interface PollDetailView {
   title: string;

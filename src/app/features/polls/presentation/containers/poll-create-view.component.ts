@@ -3,6 +3,8 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { ButtonModule } from 'primeng/button';
 import { PollCreateFacade } from '../facade/poll-create.facade';
+import { Router } from '@angular/router';
+import { Location } from '@angular/common';
 
 @Component({
   selector: 'app-poll-create-view',
@@ -10,7 +12,7 @@ import { PollCreateFacade } from '../facade/poll-create.facade';
   template: `
     <div class="max-w-xl mx-auto py-8 md:py-12 font-sans box-border animate-fade-in">
       <button
-        (click)="facade.goBack()"
+        (click)="goBack()"
         class="inline-flex items-center gap-2 text-sm font-semibold text-muted-color hover:text-color transition-colors mb-6 bg-transparent border-none cursor-pointer p-0"
       >
         <i class="pi pi-arrow-left text-xs"></i> Retour
@@ -20,7 +22,7 @@ import { PollCreateFacade } from '../facade/poll-create.facade';
         Créer un nouveau sondage
       </h1>
 
-      <form (ngSubmit)="facade.submit()" class="flex flex-col gap-6">
+      <form (ngSubmit)="onSubmit()" class="flex flex-col gap-6">
         <div>
           <div class="flex items-end justify-between mb-2">
             <label for="title" class="block text-sm font-bold text-color">
@@ -177,7 +179,7 @@ import { PollCreateFacade } from '../facade/poll-create.facade';
             label="Annuler"
             variant="text"
             severity="secondary"
-            (click)="facade.goBack()"
+            (click)="goBack()"
             styleClass="text-sm font-bold px-4"
           />
           <p-button
@@ -195,4 +197,16 @@ import { PollCreateFacade } from '../facade/poll-create.facade';
 })
 export class PollCreateViewComponent {
   protected readonly facade = inject(PollCreateFacade);
+  private readonly location = inject(Location);
+  private readonly router = inject(Router);
+
+  public goBack(): void {
+    this.location.back();
+  }
+
+  public onSubmit(): void {
+    this.facade.submit(() => {
+      void this.router.navigate(['/member']);
+    });
+  }
 }
