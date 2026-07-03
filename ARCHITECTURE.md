@@ -1,47 +1,126 @@
-# Architecture du Projet Vote App (Angular)
+# 🏗️ Architecture Front-End : Feature-First & Clean Architecture Pragmatique
 
-Ce document décrit l'architecture et les choix techniques de l'application Angular. Il sert de référence pour maintenir la cohérence du code lors des futurs développements.
+## 🎯 Philosophie du projet
 
-## 🛠️ Stack Technologique
+Cette application Angular adopte une architecture **Feature-First** propulsée par une **Clean Architecture pragmatique**.
 
-*   **Framework** : Angular 21+ (Standalone Components, Zoneless ready).
-*   **Gestion d'état** : Angular Signals (`signal`, `computed`) via des services `@Injectable`.
-*   **UI & Styles** : Tailwind CSS v4 + PrimeNG / PrimeUI (Iconographie: PrimeIcons).
-*   **Validation** : Zod (pour les schémas et la validation de données).
+Le projet est divisé en deux grandes strates :
+1. **L'écosystème global :** L'infrastructure transversale, les composants UI génériques et la mise en page (Layout).
+2. **Les fonctionnalités métier autonomes (Features) :** Le cœur de l'application (`auth`, `polls`, `users`, `analytics`), isolé en *Bounded Contexts*. Au sein de chaque module, l'architecture garantit un découplage strict entre l'UI et la logique de données (Ports & Adapters).
 
-## 📂 Structure du Projet (Feature-Driven Architecture)
+**État actuel du projet :** L'application est totalement fonctionnelle en mode "hors ligne". La couche de données est actuellement alimentée par des **Mocks en mémoire** (`FakeDataSourceImpl`). L'architecture mise en place garantit que le jour où une API REST sera connectée, aucune ligne de code de la présentation ou du domaine ne sera modifiée.
 
-L'application suit une structure stricte basée sur les domaines métiers (Domain-Driven) située dans `src/app/` :
+---
+
+## 🌍 1. Architecture Globale (Macro-niveau)
+
+À la racine de `src/app/`, le code est organisé pour séparer strictement ce qui est générique de ce qui est spécifique à un métier :
 
 ```text
 src/app/
-├── core/         # Cœur de l'application (Singletons). Interceptors, guards, modèles globaux, constantes. Aucun composant UI.
-├── features/     # Logique métier divisée par domaine (admin, auth, polls). Contient les "Smart Components".
-├── layout/       # Coquilles structurelles de l'application (auth, dashboard, public). Gère les menus, headers, footers.
-├── pages/        # Composants routables (Vues principales). Ils assemblent les layouts, features et shared.
-├── shared/       # Composants UI réutilisables (Dumb components), directives et pipes. Aucune logique métier.
-└── store/        # Gestion de l'état global avec Angular Signals (ex: auth.store.ts).
+├── core/                  # ⚙️ MOTEUR & CONFIGURATION GLOBALE
+│   ├── guards/            # Protections des routes (ex: auth.guard.ts)
+│   └── models/            # Modèles purement techniques et transversaux (ex: view-state.model.ts)
+│
+├── shared/                # 🧩 BOÎTE À OUTILS UI (Agnostique du métier)
+│   ├── components/        # Composants "Dumb" réutilisables (ex: badge)
+│   └── models/            # Types UI transversaux (ex: ui.models.ts pour les ThemeColor)
+│
+├── layout/                # 🏗️ SQUELETTE DE L'APPLICATION
+│   ├── auth/              # Layout pour les pages de connexion
+│   ├── dashboard/         # Layout applicatif (Sidebar, Topbar)
+│   └── public/            # Layout pour les pages publiques (Header, Footer)
+│
+├── store/                 # 💾 ÉTAT GLOBAL STRICT
+│   └── auth/              # (ex: AuthStore) L'état qui doit survivre à la navigation inter-features.
+│
+├── features/              # 🚀 CŒUR MÉTIER (Voir Architecture Micro-niveau)
+│   ├── analytics/
+│   ├── auth/
+│   ├── polls/
+│   └── users/
+│
+├── app.routes.ts          # Orchestration des lazy-loads vers les features
+└── app.config.ts          # Configuration Angular globale (Providers)
+
 ```
 
-## 📐 Règles Architecturales & Bonnes Pratiques
+**Règle absolue du Macro-niveau :**
+Les répertoires `shared`, `core` et `layout` ne doivent **jamais** importer un élément provenant du répertoire `features`. Les dépendances pointent toujours vers l'extérieur du métier, jamais l'inverse.
 
-1.  **Standalone Components** : L'application n'utilise pas de `NgModules`. Chaque composant gère ses propres dépendances via son tableau `imports`.
-2.  **Gestion de l'état (Signals)** : 
-    *   Privilégier les Signals (`signal`, `computed`) pour la réactivité.
-    *   Les stores globaux (dans `/store`) gèrent l'état transverse (ex: session utilisateur).
-    *   Les états locaux complexes peuvent être gérés dans des stores dédiés aux features.
-3.  **Frontières Strictes (Strict Boundaries)** :
-    *   Une feature A ne doit pas importer directement le code d'une feature B.
-    *   La communication entre features se fait via le Store ou via le routing.
-4.  **Dumb vs Smart Components** :
-    *   **Shared (`/shared`)** : Composants "Dumb". Ne font pas d'appels API, n'injectent pas de Store. Communiquent uniquement via `@Input()` et `@Output()`.
-    *   **Features (`/features`)** : Composants "Smart". Peuvent injecter des services, interagir avec le Store et contenir la logique métier.
-5.  **Routing et Lazy Loading** :
-    *   Toutes les routes principales doivent utiliser le lazy-loading (`loadComponent` ou `loadChildren`).
-    *   Le routage est basé sur les Layouts (ex: les routes protégées sont enfants du layout Dashboard).
+---
 
-## 🚀 Lancement & Scripts
+## 🔬 2. Architecture d'une Feature (Micro-niveau)
 
-*   `npm start` : Lance le serveur de développement.
-*   `npm run build` : Construit l'application pour la production.
-*   `npm test` : Lance les tests avec Vitest.
+Chaque fonctionnalité dans `features/` vit en totale autarcie. Nous appliquons une Clean Architecture "pragmatique" : la couche d'orchestration (`Application`) est fusionnée directement dans le `Domain` pour éviter la sur-ingénierie (over-engineering), tout en préservant le découplage via les contrats (Interfaces / Abstract Classes).
+
+```text
+@features/nom-de-la-feature/
+├── domain/                # 🧠 CŒUR MÉTIER (Indépendant de tout framework)
+│   ├── entities/          # Modèles de données purs (Front-end)
+│   ├── usecases/          # Contrats et implémentations des actions utilisateurs (Ports In)
+│   └── repositories/      # Contrats d'accès aux données (Ports Out)
+│
+├── data/                  # 🔌 INFRASTRUCTURE (Adapters Out)
+│   ├── datasources/       # Implémentations techniques (Actuellement : Fake/Mocks en mémoire)
+│   ├── models/            # DTOs techniques (Format brut des données mockées/API)
+│   ├── mappers/           # Fonctions de transformation (Model Data <-> Entity Métier)
+│   └── repositories/      # Implémentations concrètes des contrats du Domaine
+│
+├── presentation/          # 🎨 INTERFACE UTILISATEUR (Adapters In)
+│   ├── components/        # Composants "Dumb" spécifiques à la feature (purement visuels)
+│   ├── containers/        # Composants "Smart" (pages ou vues liées à la Façade)
+│   ├── facade/            # Gestionnaire d'état local et pont exclusif vers les Use Cases (Signals)
+│   └── store/             # ⚠️ CONDITIONNEL : Voir règle d'or de l'état.
+│
+├── nom.providers.ts       # 🔗 INJECTION (Câblage IoC local de la feature)
+└── nom.routes.ts          # 🛣️ ROUTING (Définition des sous-routes)
+
+```
+
+---
+
+## ⚖️ Règle d'Or de l'État (Facade vs Store)
+
+L'état de l'application est géré de manière minimaliste et justifiée, en s'appuyant massivement sur les **Signals** d'Angular.
+
+* **La Facade (Le standard) :** Gère l'état *local* lié à une vue ou un workflow précis (ex: `PollDetailFacade`). Elle ne doit jamais être fournie à la racine (pas de `providedIn: 'root'`). Elle stocke les données temporaires, gère le cycle de vie via le pattern `ViewState` (`IDLE`, `LOADING`, `SUCCESS`, `ERROR`) et expose des données prêtes pour l'UI via des `computed()`.
+* **Le Store (L'exception) :** Un Store (ex: `AuthStore`) n'est créé **que si, et seulement si**, la donnée doit être partagée de manière asynchrone entre plusieurs vues indépendantes, ou doit survivre à la navigation globale de l'utilisateur. On ne crée jamais un Store de manière préventive.
+
+---
+
+## 🔄 Le Flux de Données et l'Isolation
+
+Le cheminement respecte un flux unidirectionnel strict :
+
+1. **L'UI (Container)** capte une action utilisateur et appelle la **Facade**.
+2. **La Facade** met à jour son état interne (`LOADING`), prépare les paramètres et appelle le **Use Case**.
+3. **Le Use Case** (dans `domain/usecases/`) exécute la règle métier et interroge le **Repository** via son abstraction.
+4. **Le Repository Impl** (dans `data/repositories/`) délègue l'appel à la **DataSource**.
+5. **La DataSource** (ex: `PollFakeDataSourceImpl`) simule une requête et retourne un **Model** (DTO).
+6. **Le Repository Impl** utilise un **Mapper** pour convertir le `Model` technique en `Entity` pure compréhensible par le reste de l'application.
+7. L'Entity redescend vers la Façade qui met à jour ses Signals (`SUCCESS`), déclenchant ainsi le rendu final dans le composant UI.
+
+---
+
+## 💉 Injection de Dépendances (IoC) Sécurisée
+
+Pour garantir l'étanchéité absolue des *Bounded Contexts*, le décorateur `@Injectable({ providedIn: 'root' })` est **strictement banni** pour la logique métier et l'accès aux données.
+
+L'Inversion de Contrôle est gérée localement dans le fichier `.providers.ts` de chaque fonctionnalité. C'est l'unique endroit où les contrats abstraits sont liés à leurs implémentations réelles :
+
+```typescript
+export const providePollsFeature = (): Provider[] => {
+  return [
+    // Liaison du Port In (Interface) à l'Adapter In (Implémentation)
+    { provide: GetAllPollsUseCase, useClass: GetAllPollsUseCaseImpl },
+    
+    // Liaison du Port Out (Interface) à l'Adapter Out (Implémentation)
+    { provide: PollRepository, useClass: PollRepositoryImpl },
+    
+    // Déclaration de la DataSource (Actuellement mockée en mémoire)
+    { provide: PollDataSource, useClass: PollFakeDataSourceImpl },
+  ];
+};
+
+```
