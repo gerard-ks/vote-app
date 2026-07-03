@@ -1,17 +1,17 @@
 import { inject, Injectable, signal, computed, DestroyRef } from '@angular/core';
 import { catchError, tap } from 'rxjs/operators';
 import { EMPTY } from 'rxjs';
-import { PollRepository } from '../../domain/poll.repository';
-import { Poll } from '../../domain/poll.entity';
+import { Poll } from '../../domain/entities/poll.entity';
 import { PollFilterType } from '../constants/polls.constants';
 import { ViewState } from '@core/models/view-state.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { mapPollToCardView } from '@features/polls/presentation/components/poll-card.ui-model';
 import { AuthStore } from '@store/auth/auth.store';
+import { GetAllPollsUseCase } from '@features/polls/domain/usecases/get-all-polls.usecase';
 
 @Injectable()
 export class PollListFacade {
-  private readonly repository = inject(PollRepository);
+  private readonly getAllPollsUseCase = inject(GetAllPollsUseCase);
   private readonly authStore = inject(AuthStore);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -83,8 +83,8 @@ export class PollListFacade {
 
   public initPage(): void {
     this._state.set({ type: 'LOADING' });
-    this.repository
-      .getAll()
+    this.getAllPollsUseCase
+      .execute()
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         tap((polls) => {

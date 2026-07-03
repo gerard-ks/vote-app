@@ -4,10 +4,12 @@ import { catchError, tap } from 'rxjs/operators';
 import { EMPTY } from 'rxjs';
 import { MessageService } from 'primeng/api';
 import { AuthStore } from '@store/auth/auth.store';
-import { PollRepository } from '../../domain/poll.repository';
-import { Poll } from '../../domain/poll.entity';
+import { Poll } from '../../domain/entities/poll.entity';
 import { ViewState } from '@core/models/view-state.model';
 import { ThemeColor } from '@shared/models/ui.models';
+import { ClosePollUseCase } from '@features/polls/domain/usecases/close-poll.usecase';
+import { VotePollUseCase } from '@features/polls/domain/usecases/vote-poll.usecase';
+import { GetPollByIdUseCase } from '@features/polls/domain/usecases/get-poll-by-id.usecase';
 
 export interface PollOptionView {
   id: string;
@@ -31,7 +33,10 @@ export interface PollDetailView {
 
 @Injectable()
 export class PollDetailFacade {
-  private readonly repository = inject(PollRepository);
+  private readonly getPollByIdUseCase = inject(GetPollByIdUseCase);
+  private readonly votePollUseCase = inject(VotePollUseCase);
+  private readonly closePollUseCase = inject(ClosePollUseCase);
+
   private readonly authStore = inject(AuthStore);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
@@ -129,8 +134,8 @@ export class PollDetailFacade {
   public loadPoll(pollId: string): void {
     this._state.set({ type: 'LOADING' });
 
-    this.repository
-      .getById(pollId)
+    this.getPollByIdUseCase
+      .execute(pollId)
       .pipe(
         takeUntilDestroyed(this.destroyRef),
         tap((poll) => {
@@ -166,8 +171,8 @@ export class PollDetailFacade {
 
     if (!optionId || !pollId) return;
 
-    this.repository
-      .vote(pollId, optionId)
+    this.votePollUseCase
+      .execute({ pollId, optionId })
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updatedPoll) => {
@@ -187,8 +192,8 @@ export class PollDetailFacade {
 
     this._localStatus.set('closed');
 
-    this.repository
-      .closePoll(pollId)
+    this.closePollUseCase
+      .execute(pollId)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updatedPoll) => {

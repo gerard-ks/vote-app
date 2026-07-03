@@ -1,4 +1,4 @@
-import { Poll } from '@features/polls/domain/poll.entity';
+import { Poll } from '@features/polls/domain/entities/poll.entity';
 
 export interface PollCardView {
   id: string;

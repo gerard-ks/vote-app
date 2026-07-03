@@ -1,4 +1,4 @@
-import { Poll, PollOption } from '../../domain/poll.entity';
+import { Poll, PollOption } from '../../domain/entities/poll.entity';
 import {
   CreatePollRequestModel,
   PollModel,

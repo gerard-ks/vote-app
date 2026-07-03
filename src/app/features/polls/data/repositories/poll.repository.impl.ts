@@ -1,6 +1,6 @@
 import { inject, Injectable } from '@angular/core';
-import { PollRepository } from '@features/polls/domain/poll.repository';
-import { Poll } from '@features/polls/domain/poll.entity';
+import { PollRepository } from '@features/polls/domain/repositories/poll.repository';
+import { Poll } from '@features/polls/domain/entities/poll.entity';
 import { PollDataSource } from '@features/polls/data/datasources/poll.datasource';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';

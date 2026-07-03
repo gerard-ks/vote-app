@@ -1,4 +1,4 @@
-import { AnalyticsData, DashboardSummary } from '@features/analytics/domain/analytics.entity';
+import { AnalyticsData, DashboardSummary } from '@features/analytics/domain/entities/analytics.entity';
 import {
   AnalyticsDataModel,
   DashboardSummaryModel,

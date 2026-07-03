@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { AnalyticsRepository } from '../../domain/analytics.repository';
-import { AnalyticsData, DashboardSummary } from '../../domain/analytics.entity';
+import { AnalyticsRepository } from '../../domain/repositories/analytics.repository';
+import { AnalyticsData, DashboardSummary } from '../../domain/entities/analytics.entity';
 import { AnalyticsDataSource } from '../datasources/analytics.datasource';
 import { AnalyticsMapper } from '../mappers/analytics.mapper';
 

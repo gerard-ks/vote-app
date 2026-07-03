@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { UserRepository } from '../../domain/user.repository';
-import { PaginatedUsers } from '../../domain/user.entity';
+import { UserRepository } from '../../domain/repositories/user.repository';
+import { PaginatedUsers } from '../../domain/entities/user.entity';
 import { UserDataSource } from '../datasources/user.datasource';
 import { UserMapper } from '../mappers/user.mapper';
 

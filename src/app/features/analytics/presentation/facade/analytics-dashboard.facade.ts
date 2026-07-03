@@ -1,13 +1,12 @@
 import { Injectable, signal, computed, inject, DestroyRef } from '@angular/core';
-import { AnalyticsRepository } from '../../domain/analytics.repository';
-import { DashboardSummary } from '../../domain/analytics.entity';
+import { DashboardSummary } from '../../domain/entities/analytics.entity';
 import { ViewState } from '@core/models/view-state.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { GetDashboardSummaryUseCase } from '@features/analytics/domain/usecases/get-dashboard-summary.usecase';
 
 @Injectable()
 export class AnalyticsDashboardFacade {
-  // Injection propre du contrat de son propre domaine
-  private readonly repository = inject(AnalyticsRepository);
+  private readonly getDashboardSummaryUseCase = inject(GetDashboardSummaryUseCase);
   private readonly destroyRef = inject(DestroyRef);
 
   // 1. L'état global unifié
@@ -42,8 +41,7 @@ export class AnalyticsDashboardFacade {
     // On notifie la vue que le chargement commence
     this._state.set({ type: 'LOADING' });
 
-    this.repository
-      .getDashboardSummary()
+    this.getDashboardSummaryUseCase.execute()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => {

@@ -1,15 +1,18 @@
 import { Injectable, signal, inject } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import { ViewState } from '@core/models/view-state.model';
-import { AuthRepository } from '@features/auth/domain/auth.repository';
 import { AuthStore } from '@store/auth/auth.store';
 import { UserRole, UserSession } from '@store/auth/auth.model';
+import { RegisterUseCase } from '@features/auth/domain/usecases/register.usecase';
+import { LoginUseCase } from '@features/auth/domain/usecases/login.usecase';
 
 @Injectable()
 export class AuthFacade {
   private readonly messageService = inject(MessageService);
   private readonly authStore = inject(AuthStore);
-  private readonly repository = inject(AuthRepository);
+
+  private readonly loginUseCase = inject(LoginUseCase);
+  private readonly registerUseCase = inject(RegisterUseCase);
 
   private readonly _state = signal<ViewState<null>>({ type: 'IDLE' });
   public readonly state = this._state.asReadonly();
@@ -23,7 +26,7 @@ export class AuthFacade {
   public login(rawEmail: string, onSuccess: (role: UserRole) => void): void {
     this._state.set({ type: 'LOADING' });
 
-    this.repository.login(rawEmail).subscribe({
+    this.loginUseCase.execute(rawEmail).subscribe({
       next: (user) => {
         const session: UserSession = {
           id: crypto.randomUUID(),
@@ -65,7 +68,7 @@ export class AuthFacade {
   ): void {
     this._state.set({ type: 'LOADING' });
 
-    this.repository.register(name, email, role).subscribe({
+    this.registerUseCase.execute({ name, email, role }).subscribe({
       next: (user) => {
         const session: UserSession = {
           id: crypto.randomUUID(),

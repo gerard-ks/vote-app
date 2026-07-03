@@ -1,4 +1,4 @@
-import { User, PaginatedUsers, UserRole } from '../../domain/user.entity';
+import { User, PaginatedUsers, UserRole } from '../../domain/entities/user.entity';
 import { PaginatedUsersModel, UserModel } from '@features/users/data/models/user.model';
 
 export class UserMapper {

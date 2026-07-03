@@ -1,7 +1,7 @@
 import { inject, Injectable } from '@angular/core';
 import { Observable, map } from 'rxjs';
-import { AuthRepository } from '../../domain/auth.repository';
-import { AuthUser, AuthRole } from '../../domain/auth.entity';
+import { AuthRepository } from '../../domain/repositories/auth.repository';
+import { AuthUser, AuthRole } from '../../domain/entities/auth.entity';
 import { AuthDataSource } from '../datasources/auth.datasource';
 import { AuthMapper } from '../mappers/auth.mapper';
 

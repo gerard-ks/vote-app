@@ -1,10 +1,12 @@
 import { Injectable, signal, computed, inject, DestroyRef } from '@angular/core';
 import { MessageService } from 'primeng/api';
-import { PollRepository } from '../../domain/poll.repository';
-import { Poll, PollStatus } from '../../domain/poll.entity';
+import { Poll, PollStatus } from '../../domain/entities/poll.entity';
 import { ViewState } from '@core/models/view-state.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
 import { ThemeColor } from '@shared/models/ui.models';
+import { DeletePollUseCase } from '@features/polls/domain/usecases/delete-poll.usecase';
+import { ClosePollUseCase } from '@features/polls/domain/usecases/close-poll.usecase';
+import { GetAllPollsUseCase } from '@features/polls/domain/usecases/get-all-polls.usecase';
 
 export interface PollModerationView {
   id: string;
@@ -19,7 +21,9 @@ export interface PollModerationView {
 
 @Injectable()
 export class PollsModerationFacade {
-  private readonly repository = inject(PollRepository);
+  private readonly getAllPollsUseCase = inject(GetAllPollsUseCase);
+  private readonly closePollUseCase = inject(ClosePollUseCase);
+  private readonly deletePollUseCase = inject(DeletePollUseCase);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -90,8 +94,8 @@ export class PollsModerationFacade {
   // ACTIONS MÉTIER
   public loadPolls(): void {
     this._state.set({ type: 'LOADING' });
-    this.repository
-      .getAll()
+    this.getAllPollsUseCase
+      .execute()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (data) => this._state.set({ type: 'SUCCESS', data }),
@@ -115,8 +119,8 @@ export class PollsModerationFacade {
   }
 
   public closePoll(id: string): void {
-    this.repository
-      .closePoll(id)
+    this.closePollUseCase
+      .execute(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: (updatedPoll) => {
@@ -135,8 +139,8 @@ export class PollsModerationFacade {
   }
 
   public deletePoll(id: string): void {
-    this.repository
-      .deletePoll(id)
+    this.deletePollUseCase
+      .execute(id)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {

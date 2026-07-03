@@ -1,12 +1,12 @@
 import { Injectable, signal, inject, computed } from '@angular/core';
-import { Poll } from '@features/polls/domain/poll.entity';
+import { Poll } from '@features/polls/domain/entities/poll.entity';
 import { AuthStore } from '@store/auth/auth.store';
-import { PollRepository } from '@features/polls/domain/poll.repository';
 import { mapPollToCardView } from '@features/polls/presentation/components/poll-card.ui-model';
+import { GetVotedPollsUseCase } from '@features/polls/domain/usecases/get-voted-polls.usecase';
 
 @Injectable()
 export class PollMyVotesFacade {
-  private readonly repository = inject(PollRepository);
+  private readonly getVotedPollsUseCase = inject(GetVotedPollsUseCase);
   private readonly authStore = inject(AuthStore);
 
   private readonly _polls = signal<Poll[]>([]);
@@ -27,7 +27,7 @@ export class PollMyVotesFacade {
     this._loading.set(true);
 
     // Le repositories filtre les sondages où l'email est présent dans 'voters'
-    this.repository.getVotedPolls(email).subscribe({
+    this.getVotedPollsUseCase.execute(email).subscribe({
       next: (data) => {
         this._polls.set(data);
         this._loading.set(false);

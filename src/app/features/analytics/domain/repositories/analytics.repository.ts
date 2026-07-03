@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { AnalyticsData, DashboardSummary } from './analytics.entity';
+import { AnalyticsData, DashboardSummary } from '../entities/analytics.entity';
 
 export abstract class AnalyticsRepository {
   abstract getDashboardSummary(): Observable<DashboardSummary>;

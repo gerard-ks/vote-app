@@ -1,4 +1,4 @@
-import { AuthRole, AuthUser } from '@features/auth/domain/auth.entity';
+import { AuthRole, AuthUser } from '@features/auth/domain/entities/auth.entity';
 import { AuthUserModel } from '@features/auth/data/models/auth.model';
 
 export class AuthMapper {

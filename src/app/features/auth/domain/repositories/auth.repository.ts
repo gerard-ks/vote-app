@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { AuthUser, AuthRole } from './auth.entity';
+import { AuthUser, AuthRole } from '../entities/auth.entity';
 
 export abstract class AuthRepository {
   abstract login(email: string): Observable<AuthUser>;

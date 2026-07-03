@@ -1,13 +1,15 @@
 import { Injectable, signal, computed, inject, DestroyRef } from '@angular/core';
 import { MessageService } from 'primeng/api';
-import { AnalyticsRepository } from '../../domain/analytics.repository';
-import { AnalyticsData } from '../../domain/analytics.entity';
+import { AnalyticsData } from '../../domain/entities/analytics.entity';
 import { ViewState } from '@core/models/view-state.model';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { ExportDataUseCase } from '@features/analytics/domain/usecases/export-data.usecase';
+import { GetAnalyticsUseCase } from '@features/analytics/domain/usecases/get-analytics.usecase';
 
 @Injectable()
 export class AnalyticsFacade {
-  private readonly repository = inject(AnalyticsRepository);
+  private readonly getAnalyticsUseCase = inject(GetAnalyticsUseCase);
+  private readonly exportDataUseCase = inject(ExportDataUseCase);
   private readonly messageService = inject(MessageService);
   private readonly destroyRef = inject(DestroyRef);
 
@@ -49,18 +51,19 @@ export class AnalyticsFacade {
 
   public loadAnalytics(): void {
     this._state.set({ type: 'LOADING' });
-    this.repository.getAnalytics()
+    this.getAnalyticsUseCase
+      .execute()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
-      next: (data) => this._state.set({ type: 'SUCCESS', data }),
-      error: () =>
-        this._state.set({ type: 'ERROR', message: 'Impossible de charger les métriques.' }),
-    });
+        next: (data) => this._state.set({ type: 'SUCCESS', data }),
+        error: () =>
+          this._state.set({ type: 'ERROR', message: 'Impossible de charger les métriques.' }),
+      });
   }
 
   public triggerExport(): void {
-    this.repository
-      .exportData()
+    this.exportDataUseCase
+      .execute()
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {

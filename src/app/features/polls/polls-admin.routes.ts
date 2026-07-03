@@ -1,11 +1,12 @@
 import { Routes } from '@angular/router';
-import { PollRepository } from '@features/polls/domain/poll.repository';
+import { PollRepository } from '@features/polls/domain/repositories/poll.repository';
 import { PollRepositoryImpl } from '@features/polls/data/repositories/poll.repository.impl';
+import { providePollFeature } from '@features/polls/polls.providers';
 
 export const POLLS_ADMIN_ROUTES: Routes = [
   {
     path: '', // On est déjà dans /admin/moderation
-    providers: [{ provide: PollRepository, useClass: PollRepositoryImpl }],
+    providers: [providePollFeature()],
     children: [
       {
         path: '',
@@ -17,7 +18,9 @@ export const POLLS_ADMIN_ROUTES: Routes = [
       {
         path: 'sondage/:id',
         loadComponent: () =>
-          import('@features/polls/presentation/pages/poll-detail-page.component').then((m) => m.PollDetailPageComponent),
+          import('@features/polls/presentation/pages/poll-detail-page.component').then(
+            (m) => m.PollDetailPageComponent,
+          ),
       },
     ],
   },

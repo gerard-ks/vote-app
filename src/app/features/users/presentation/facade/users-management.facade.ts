@@ -1,8 +1,10 @@
 import { Injectable, signal, computed, inject } from '@angular/core';
 import { MessageService } from 'primeng/api';
-import { UserRepository } from '../../domain/user.repository';
-import { PaginatedUsers } from '../../domain/user.entity';
+import { PaginatedUsers } from '../../domain/entities/user.entity';
 import { ViewState } from '@core/models/view-state.model';
+import { VerifyUserEmailUseCase } from '@features/users/domain/usecases/verify-user-email.usecase';
+import { ToggleUserStatusUseCase } from '@features/users/domain/usecases/toggle-user-status.usecase';
+import { GetUsersUseCase } from '@features/users/domain/usecases/get-users.usecase';
 
 export interface UserView {
   id: string;
@@ -20,7 +22,9 @@ export interface UserView {
 
 @Injectable()
 export class UsersManagementFacade {
-  private readonly repository = inject(UserRepository);
+  private readonly getUsersUseCase = inject(GetUsersUseCase);
+  private readonly toggleUserStatusUseCase = inject(ToggleUserStatusUseCase);
+  private readonly verifyUserEmailUseCase = inject(VerifyUserEmailUseCase);
   private readonly messageService = inject(MessageService);
 
   private readonly _state = signal<ViewState<PaginatedUsers>>({ type: 'IDLE' });
@@ -68,26 +72,31 @@ export class UsersManagementFacade {
     });
   });
 
-
   public loadUsers(): void {
     this._state.set({ type: 'LOADING' });
 
-    this.repository.getUsers(this._currentPage(), this._pageSize(), this._searchTerm()).subscribe({
-      next: (data) => {
-        const hasData = data && data.items && data.items.length > 0;
-        if (!hasData) {
-          this._state.set({ type: 'EMPTY' });
-        } else {
-          this._state.set({ type: 'SUCCESS', data });
-        }
-      },
-      error: () => {
-        this._state.set({
-          type: 'ERROR',
-          message: 'Impossible de récupérer la liste des utilisateurs pour le moment.',
-        });
-      },
-    });
+    this.getUsersUseCase
+      .execute({
+        page: this._currentPage(),
+        limit: this._pageSize(),
+        searchTerm: this._searchTerm(),
+      })
+      .subscribe({
+        next: (data) => {
+          const hasData = data && data.items && data.items.length > 0;
+          if (!hasData) {
+            this._state.set({ type: 'EMPTY' });
+          } else {
+            this._state.set({ type: 'SUCCESS', data });
+          }
+        },
+        error: () => {
+          this._state.set({
+            type: 'ERROR',
+            message: 'Impossible de récupérer la liste des utilisateurs pour le moment.',
+          });
+        },
+      });
   }
 
   public updateSearch(term: string): void {
@@ -104,7 +113,7 @@ export class UsersManagementFacade {
   public toggleStatus(userId: string, currentStatus: boolean): void {
     const newStatus = !currentStatus;
 
-    this.repository.toggleUserStatus(userId, newStatus).subscribe({
+    this.toggleUserStatusUseCase.execute({ userId, newStatus }).subscribe({
       next: () => {
         this.loadUsers();
         this.messageService.add({
@@ -126,7 +135,7 @@ export class UsersManagementFacade {
   }
 
   public verifyEmail(userId: string): void {
-    this.repository.verifyUserEmail(userId).subscribe({
+    this.verifyUserEmailUseCase.execute(userId).subscribe({
       next: () => {
         this.loadUsers();
         this.messageService.add({

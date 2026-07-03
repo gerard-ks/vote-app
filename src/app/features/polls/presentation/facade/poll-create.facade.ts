@@ -1,14 +1,14 @@
 import { Injectable, signal, computed, inject, DestroyRef } from '@angular/core';
 import { MessageService } from 'primeng/api';
 import { AuthStore } from '@store/auth/auth.store';
-import { PollRepository } from '@features/polls/domain/poll.repository';
 import { takeUntilDestroyed } from '@angular/core/rxjs-interop';
+import { CreatePollUseCase } from '@features/polls/domain/usecases/create-poll.usecase';
 
 @Injectable()
 export class PollCreateFacade {
   private readonly authStore = inject(AuthStore);
   private readonly messageService = inject(MessageService);
-  private readonly repository = inject(PollRepository);
+  private readonly createPollUseCase = inject(CreatePollUseCase);
   private readonly destroyRef = inject(DestroyRef);
 
   // ÉTAT LOCAL
@@ -115,7 +115,7 @@ export class PollCreateFacade {
 
     this.isSubmitting.set(true);
 
-    const payload = {
+    const command = {
       title: this.title().trim(),
       options: validOptions.map((text) => ({ text, votes: 0, id: crypto.randomUUID() })),
       expiresAt: this.expiresAt(),
@@ -123,8 +123,8 @@ export class PollCreateFacade {
       createdBy: session.name,
     };
 
-    this.repository
-      .createPoll(payload)
+    this.createPollUseCase
+      .execute(command)
       .pipe(takeUntilDestroyed(this.destroyRef))
       .subscribe({
         next: () => {

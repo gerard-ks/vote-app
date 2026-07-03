@@ -1,5 +1,5 @@
 import { Observable } from 'rxjs';
-import { PaginatedUsers } from './user.entity';
+import { PaginatedUsers } from '../entities/user.entity';
 
 export abstract class UserRepository {
   // Récupérer la liste avec pagination et recherche
